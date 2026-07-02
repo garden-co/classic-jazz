@@ -38,14 +38,31 @@ export function isAgentID(id: unknown): id is AgentID {
 
 export type ActiveSessionID = `${RawAccountID | AgentID}_session_z${string}`;
 export type DeleteSessionID = `${RawAccountID | AgentID}_session_d${string}$`;
-export type SessionID = ActiveSessionID | DeleteSessionID;
+export type ConflictSessionID = `${RawAccountID | AgentID}_session_z${string}!`;
+export type SessionID = ActiveSessionID | DeleteSessionID | ConflictSessionID;
 
 const CHAR_DOLLAR = "$".charCodeAt(0);
+const CHAR_EXCLAMATION = "!".charCodeAt(0);
 
 export function isDeleteSessionID(
   sessionID: SessionID,
 ): sessionID is DeleteSessionID {
   return sessionID.charCodeAt(sessionID.length - 1) === CHAR_DOLLAR;
+}
+
+export function isConflictSessionID(
+  sessionID: SessionID,
+): sessionID is ConflictSessionID {
+  return (
+    sessionID.charCodeAt(sessionID.length - 1) === CHAR_EXCLAMATION &&
+    sessionID.charCodeAt(sessionID.length - 2) !== CHAR_DOLLAR
+  );
+}
+
+export function toConflictSessionID(
+  sessionID: ActiveSessionID,
+): ConflictSessionID {
+  return `${sessionID}!` as ConflictSessionID;
 }
 
 export function isParentGroupReference(

@@ -212,6 +212,25 @@ export class SQLiteClient
     });
   }
 
+  deleteSessionContent(coValueRowId: number, sessionID: SessionID): void {
+    const sessionRow = this.db.get<{ rowID: number }>(
+      "SELECT rowID FROM sessions WHERE coValue = ? AND sessionID = ?",
+      [coValueRowId, sessionID],
+    );
+
+    if (!sessionRow) {
+      return;
+    }
+
+    this.transaction(() => {
+      this.db.run("DELETE FROM transactions WHERE ses = ?", [sessionRow.rowID]);
+      this.db.run("DELETE FROM signatureAfter WHERE ses = ?", [
+        sessionRow.rowID,
+      ]);
+      this.db.run("DELETE FROM sessions WHERE rowID = ?", [sessionRow.rowID]);
+    });
+  }
+
   getAllCoValuesWaitingForDelete(): RawCoID[] {
     return this.db
       .query<DeletedCoValueQueueRow>(

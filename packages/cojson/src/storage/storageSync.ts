@@ -26,6 +26,7 @@ import type {
   CorrectionCallback,
   DBClientInterfaceSync,
   DBTransactionInterfaceSync,
+  ReplaceSessionHistoryInput,
   SignatureAfterRow,
   StoredCoValueRow,
   StoredSessionRow,
@@ -300,8 +301,68 @@ export class StorageApiSync implements StorageAPI {
     pushCallback(contentMessage);
   }
 
-  store(msg: NewContentMessage, correctionCallback: CorrectionCallback) {
-    return this.storeSingle(msg, correctionCallback);
+  store(
+    msg: NewContentMessage | ReplaceSessionHistoryInput,
+    correctionCallback: CorrectionCallback,
+  ): void {
+    if ("action" in msg && msg.action === "replaceSessionHistory") {
+      this.storeSingleSessionReplacement(msg);
+      return;
+    }
+
+    // Return value used by internal callers (storeSingle returns boolean)
+    return this.storeSingle(msg, correctionCallback) as unknown as void;
+  }
+
+  private storeSingleSessionReplacement(msg: ReplaceSessionHistoryInput): void {
+    const coValueRow = this.dbClient.getCoValue(msg.coValueId);
+    if (!coValueRow) {
+      logger.warn("replaceSessionHistory: CoValue not found", {
+        id: msg.coValueId,
+      });
+      return;
+    }
+
+    // Delete existing session content
+    this.dbClient.deleteSessionContent(coValueRow.rowID, msg.sessionID);
+
+    // Write new authoritative content
+    for (const piece of msg.content) {
+      this.dbClient.transaction((tx) => {
+        const sessionRow = tx.getSingleCoValueSession(
+          coValueRow.rowID,
+          msg.sessionID,
+        );
+        this.putNewTxs(
+          tx,
+          {
+            id: msg.coValueId,
+            action: "content",
+            priority: 6 as const,
+            new: {
+              [msg.sessionID]: piece,
+            },
+          } as NewContentMessage,
+          msg.sessionID,
+          sessionRow,
+          coValueRow.rowID,
+        );
+      });
+    }
+
+    // Update known state from authoritative content
+    const knownState = this.knownStates.getKnownState(msg.coValueId);
+    knownState.header = true;
+
+    const lastPiece = msg.content[msg.content.length - 1];
+    if (lastPiece) {
+      setSessionCounter(
+        knownState.sessions,
+        msg.sessionID,
+        lastPiece.after + lastPiece.newTransactions.length,
+      );
+    }
+    this.knownStates.handleUpdate(msg.coValueId, knownState);
   }
 
   /**

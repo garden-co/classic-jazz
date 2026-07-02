@@ -4,7 +4,7 @@ import type {
 } from "../coValueCore/verifiedState.js";
 import { Signature } from "../crypto/crypto.js";
 import type { CoValueCore, RawCoID, SessionID } from "../exports.js";
-import { NewContentMessage } from "../sync.js";
+import { NewContentMessage, type SessionNewContent } from "../sync.js";
 import type { PeerID } from "../sync.js";
 import { CoValueKnownState } from "../knownState.js";
 import { StorageStreamingQueue } from "../queue/StorageStreamingQueue.js";
@@ -12,6 +12,13 @@ import { StorageStreamingQueue } from "../queue/StorageStreamingQueue.js";
 export type CorrectionCallback = (
   correction: CoValueKnownState,
 ) => NewContentMessage[] | undefined;
+
+export type ReplaceSessionHistoryInput = {
+  action: "replaceSessionHistory";
+  coValueId: RawCoID;
+  sessionID: SessionID;
+  content: SessionNewContent[];
+};
 
 export type StorageReconciliationAcquireResult =
   | { acquired: true; lastProcessedOffset: number }
@@ -60,7 +67,10 @@ export interface StorageAPI {
     callback: (data: NewContentMessage) => void,
     done?: (found: boolean) => void,
   ): void;
-  store(data: NewContentMessage, handleCorrection: CorrectionCallback): void;
+  store(
+    data: NewContentMessage | ReplaceSessionHistoryInput,
+    handleCorrection: CorrectionCallback,
+  ): void | Promise<void>;
 
   streamingQueue?: StorageStreamingQueue;
 
@@ -273,6 +283,11 @@ export interface DBClientInterfaceAsync {
     firstNewTxIdx: number,
   ): Promise<SignatureAfterRow[]>;
 
+  deleteSessionContent(
+    coValueRowId: number,
+    sessionID: SessionID,
+  ): Promise<void>;
+
   transaction(
     callback: (tx: DBTransactionInterfaceAsync) => Promise<unknown>,
   ): Promise<unknown>;
@@ -404,6 +419,8 @@ export interface DBClientInterfaceSync {
    * Must run inside a single storage transaction.
    */
   eraseCoValueButKeepTombstone(coValueID: RawCoID): unknown;
+
+  deleteSessionContent(coValueRowId: number, sessionID: SessionID): void;
 
   /**
    * Get the knownState for a CoValue without loading transactions.

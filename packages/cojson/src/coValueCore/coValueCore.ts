@@ -15,17 +15,24 @@ import {
   SignerID,
 } from "../crypto/crypto.js";
 import {
+  ActiveSessionID,
   AgentID,
   isDeleteSessionID,
   RawCoID,
   SessionID,
   TransactionID,
+  toConflictSessionID,
 } from "../ids.js";
 import { JsonObject, JsonValue } from "../jsonValue.js";
 import { LocalNode, ResolveAccountAgentError } from "../localNode.js";
 import { logger } from "../logger.js";
 import { determineValidTransactions } from "../permissions.js";
-import { KnownStateMessage, NewContentMessage, PeerID } from "../sync.js";
+import {
+  KnownStateMessage,
+  NewContentMessage,
+  PeerID,
+  SessionNewContent,
+} from "../sync.js";
 import { accountOrAgentIDfromSessionID } from "../typeUtils/accountOrAgentIDfromSessionID.js";
 import { expectGroup } from "../typeUtils/expectGroup.js";
 import {
@@ -926,6 +933,126 @@ export class CoValueCore {
     this.verified?.markAsDeleted();
   }
 
+  /**
+   * Replace a single session's content with authoritative data from the server.
+   * Rebuilds the VerifiedState from scratch with all existing sessions except
+   * the replaced one, then applies the authoritative content for that session.
+   * Used during signature mismatch recovery.
+   */
+  replaceSessionContent(
+    sessionID: SessionID,
+    authoritativeContent: SessionNewContent[],
+  ): void {
+    if (!this.verified) {
+      throw new Error(
+        "CoValueCore: replaceSessionContent called without verified state",
+      );
+    }
+
+    const knownStateBefore = this.knownState();
+    const oldVerified = this.verified;
+
+    // Build a fresh VerifiedState
+    const newVerified = new VerifiedState(
+      this.id,
+      this.node.crypto,
+      oldVerified.header,
+    );
+
+    // Replay all sessions except the one being replaced
+    for (const [
+      existingSessionID,
+      sessionLog,
+    ] of oldVerified.sessionEntries()) {
+      if (existingSessionID === sessionID) {
+        continue;
+      }
+
+      if (sessionLog.transactions.length === 0 || !sessionLog.lastSignature) {
+        continue;
+      }
+
+      newVerified.tryAddTransactions(
+        existingSessionID,
+        undefined, // skipVerify=true, signer not needed
+        sessionLog.transactions,
+        sessionLog.lastSignature,
+        true, // skipVerify — already verified
+      );
+    }
+
+    // Apply authoritative content for the replaced session
+    for (const piece of authoritativeContent) {
+      newVerified.tryAddTransactions(
+        sessionID,
+        undefined,
+        piece.newTransactions,
+        piece.lastSignature,
+        true, // skipVerify — authoritative from server
+      );
+    }
+
+    // Swap
+    this._verified = newVerified;
+
+    // Check delete state
+    this.isDeleted = false;
+    for (const [sid] of newVerified.sessionEntries()) {
+      if (isDeleteSessionID(sid)) {
+        this.isDeleted = true;
+        break;
+      }
+    }
+
+    // Clear all derived transaction state so it's rebuilt from the new VerifiedState
+    this.verifiedTransactions = [];
+    this.verifiedTransactionsKnownSessions = {};
+    this.lastVerifiedTransactionBySessionID = {};
+    this.toValidateTransactions = [];
+    this.toProcessTransactions = [];
+    this.toDecryptTransactions = [];
+    this.toParseMetaTransactions = [];
+    this.#fwwWinners.clear();
+    this.branchStart = undefined;
+    this.mergeCommits = [];
+    this.earliestTxMadeAt = Number.MAX_SAFE_INTEGER;
+    this.latestTxMadeAt = 0;
+
+    // Reload transactions from the new VerifiedState
+    this.loadVerifiedTransactionsFromLogs();
+    this.parseNewTransactions(false);
+
+    this._cachedContent?.rebuildFromCore();
+    this.scheduleNotifyUpdate();
+    this.invalidateDependants();
+    this.node.syncManager.syncLocalTransaction(
+      this._verified,
+      knownStateBefore,
+    );
+  }
+
+  /**
+   * Get the parsed (decrypted) changes and meta for a transaction.
+   * Checks the parsing cache first, then falls back to searching verified transactions.
+   * Used by recovery to re-create divergent transactions on a conflict session.
+   */
+  getParsedTransaction(
+    tx: Transaction,
+  ): { changes: JsonValue[]; meta: JsonObject | undefined } | undefined {
+    const cached = this.parsingCache.get(tx);
+    if (cached) return cached;
+
+    // The parsing cache is consumed by loadVerifiedTransactionsFromLogs,
+    // so check verified transactions for the parsed data
+    for (const vt of this.verifiedTransactions) {
+      if (vt.tx === tx && vt.changes) {
+        return { changes: vt.changes, meta: vt.meta };
+      }
+    }
+
+    return undefined;
+  }
+
   #getDeleteMarker(tx: Transaction): { deleted: RawCoID } | undefined {
     if (tx.privacy !== "trusting") {
       return;
@@ -1176,6 +1303,7 @@ export class CoValueCore {
     privacy: "private" | "trusting",
     meta?: JsonObject,
     madeAt?: number,
+    isConflict?: boolean,
   ): boolean {
     if (!this.verified) {
       throw new Error(
@@ -1204,6 +1332,10 @@ export class CoValueCore {
       sessionID = this.crypto.newDeleteSessionID(
         this.node.getCurrentAccountOrAgentID(),
       );
+    }
+
+    if (isConflict) {
+      sessionID = toConflictSessionID(sessionID as ActiveSessionID);
     }
 
     const signerAgent = this.node.getCurrentAgent();

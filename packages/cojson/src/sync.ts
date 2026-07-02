@@ -34,6 +34,7 @@ import {
   peerHasAllContent,
 } from "./knownState.js";
 import { StorageAPI } from "./storage/index.js";
+import { recoverSignatureMismatch } from "./recovery/index.js";
 
 export type SyncMessage =
   | LoadMessage
@@ -41,7 +42,8 @@ export type SyncMessage =
   | NewContentMessage
   | DoneMessage
   | ReconcileMessage
-  | ReconcileAckMessage;
+  | ReconcileAckMessage
+  | SignatureMismatchErrorMessage;
 
 export type LoadMessage = {
   action: "load";
@@ -87,6 +89,14 @@ export type ReconcileMessage = {
 export type ReconcileAckMessage = {
   action: "reconcile-ack";
   id: ReconcileBatchID;
+};
+
+export type SignatureMismatchErrorMessage = {
+  action: "error";
+  errorType: "SignatureMismatch";
+  id: RawCoID;
+  sessionID: SessionID;
+  content: SessionNewContent[];
 };
 
 /**
@@ -231,6 +241,10 @@ export class SyncManager {
       return;
     }
 
+    if (msg.action === "error") {
+      return this.handleErrorMessage(msg, peer);
+    }
+
     if (!isRawCoID(msg.id)) {
       const errorType = msg.id ? "invalid" : "undefined";
       logger.warn(`Received sync message with ${errorType} id`, {
@@ -283,6 +297,21 @@ export class SyncManager {
           `Unknown message type ${(msg as { action: "string" }).action}`,
         );
     }
+  }
+
+  private handleErrorMessage(
+    msg: Extract<SyncMessage, { action: "error" }>,
+    peer: PeerState,
+  ) {
+    if (msg.errorType !== "SignatureMismatch") {
+      return;
+    }
+
+    if (peer.role !== "server") {
+      return;
+    }
+
+    recoverSignatureMismatch(this.local, msg);
   }
 
   sendNewContent(
@@ -1267,6 +1296,25 @@ export class SyncManager {
       );
 
       if (error) {
+        if (
+          peer?.role === "client" &&
+          error.type === "InvalidSignature" &&
+          peer.shouldSendSignatureMismatch(msg.id, sessionID)
+        ) {
+          this.trySendToPeer(peer, {
+            action: "error",
+            errorType: "SignatureMismatch",
+            id: msg.id,
+            sessionID,
+            content: coValue.verified.getFullSessionContent(sessionID),
+          });
+          continue; // Continue processing remaining sessions
+        }
+
+        if (peer?.role === "client" && error.type === "InvalidSignature") {
+          continue;
+        }
+
         if (peer) {
           logger.error("Failed to add transactions", {
             peerId: peer.id,

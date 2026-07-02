@@ -119,6 +119,12 @@ export class IDBTransaction implements DBTransactionInterfaceAsync {
     }
   }
 
+  async deleteSessionData(sessionRowID: number): Promise<void> {
+    await this.#deleteAllBySesPrefix("transactions", sessionRowID);
+    await this.#deleteAllBySesPrefix("signatureAfter", sessionRowID);
+    await this.run((tx) => tx.getObjectStore("sessions").delete(sessionRowID));
+  }
+
   async addSessionUpdate({
     sessionUpdate,
     sessionRow,
@@ -369,6 +375,26 @@ export class IDBClient implements DBClientInterfaceAsync {
       },
       ["unsyncedCoValues"],
     );
+  }
+
+  async deleteSessionContent(
+    coValueRowId: number,
+    sessionID: SessionID,
+  ): Promise<void> {
+    await this.transaction(async (tx) => {
+      const idbTx = tx as IDBTransaction;
+
+      const session = await idbTx.getSingleCoValueSession(
+        coValueRowId,
+        sessionID,
+      );
+
+      if (!session) {
+        return;
+      }
+
+      await idbTx.deleteSessionData(session.rowID);
+    });
   }
 
   async eraseCoValueButKeepTombstone(coValueID: RawCoID): Promise<void> {

@@ -255,6 +255,10 @@ function trackStorageMessages(
   };
 
   storage.store = function (data, correctionCallback) {
+    if ("action" in data && data.action === "replaceSessionHistory") {
+      return originalStore.call(storage, data, correctionCallback);
+    }
+
     SyncMessagesLog.add({
       from: nodeName,
       to: storageName,

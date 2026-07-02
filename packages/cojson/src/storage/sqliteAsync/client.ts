@@ -339,6 +339,30 @@ export class SQLiteClientAsync implements DBClientInterfaceAsync {
     return rows.map((r) => r.id);
   }
 
+  async deleteSessionContent(
+    coValueRowId: number,
+    sessionID: SessionID,
+  ): Promise<void> {
+    await this.enqueueTx(async () => {
+      const sessionRow = await this.db.get<{ rowID: number }>(
+        "SELECT rowID FROM sessions WHERE coValue = ? AND sessionID = ?",
+        [coValueRowId, sessionID],
+      );
+
+      if (!sessionRow) return;
+
+      await this.db.run("DELETE FROM transactions WHERE ses = ?", [
+        sessionRow.rowID,
+      ]);
+      await this.db.run("DELETE FROM signatureAfter WHERE ses = ?", [
+        sessionRow.rowID,
+      ]);
+      await this.db.run("DELETE FROM sessions WHERE rowID = ?", [
+        sessionRow.rowID,
+      ]);
+    });
+  }
+
   async transaction(
     operationsCallback: (tx: DBTransactionInterfaceAsync) => Promise<unknown>,
   ): Promise<unknown> {

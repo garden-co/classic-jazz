@@ -27,6 +27,7 @@ import type {
   CorrectionCallback,
   DBClientInterfaceAsync,
   DBTransactionInterfaceAsync,
+  ReplaceSessionHistoryInput,
   SignatureAfterRow,
   StoredCoValueRow,
   StoredSessionRow,
@@ -267,7 +268,28 @@ export class StorageApiAsync implements StorageAPI {
 
   storeQueue = new StoreQueue();
 
-  async store(msg: NewContentMessage, correctionCallback: CorrectionCallback) {
+  async store(
+    msg: NewContentMessage | ReplaceSessionHistoryInput,
+    correctionCallback: CorrectionCallback,
+  ) {
+    if ("action" in msg && msg.action === "replaceSessionHistory") {
+      // Push a dummy entry so processQueue has something to pull
+      this.storeQueue.push(
+        { id: msg.coValueId, new: {} } as NewContentMessage,
+        () => undefined,
+      );
+
+      return this.storeQueue.processQueue(async () => {
+        this.interruptEraser("store");
+        try {
+          await this.storeSingleSessionReplacement(msg);
+        } catch (err) {
+          logger.error("Error replacing session history", { err });
+        }
+        return true;
+      }) as unknown as Promise<void>;
+    }
+
     /**
      * The store operations must be done one by one, because we can't start a new transaction when there
      * is already a transaction open.
@@ -481,6 +503,59 @@ export class StorageApiAsync implements StorageAPI {
     );
 
     return newLastIdx;
+  }
+
+  private async storeSingleSessionReplacement(
+    msg: ReplaceSessionHistoryInput,
+  ): Promise<void> {
+    const coValueRow = await this.dbClient.getCoValue(msg.coValueId);
+    if (!coValueRow) {
+      logger.warn("replaceSessionHistory: CoValue not found", {
+        id: msg.coValueId,
+      });
+      return;
+    }
+
+    // Delete existing session content
+    await this.dbClient.deleteSessionContent(coValueRow.rowID, msg.sessionID);
+
+    // Write new authoritative content
+    for (const piece of msg.content) {
+      await this.dbClient.transaction(async (tx) => {
+        const sessionRow = await tx.getSingleCoValueSession(
+          coValueRow.rowID,
+          msg.sessionID,
+        );
+        await this.putNewTxs(
+          tx,
+          {
+            id: msg.coValueId,
+            action: "content",
+            priority: 6 as const,
+            new: {
+              [msg.sessionID]: piece,
+            },
+          } as NewContentMessage,
+          msg.sessionID,
+          sessionRow,
+          coValueRow.rowID,
+        );
+      });
+    }
+
+    // Update known state from authoritative content
+    const knownState = this.knownStates.getKnownState(msg.coValueId);
+    knownState.header = true;
+
+    const lastPiece = msg.content[msg.content.length - 1];
+    if (lastPiece) {
+      setSessionCounter(
+        knownState.sessions,
+        msg.sessionID,
+        lastPiece.after + lastPiece.newTransactions.length,
+      );
+    }
+    this.knownStates.handleUpdate(msg.coValueId, knownState);
   }
 
   deletedValues = new Set<RawCoID>();

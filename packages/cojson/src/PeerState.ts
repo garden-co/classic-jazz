@@ -1,6 +1,6 @@
 import { PeerKnownState } from "./coValueCore/PeerKnownState.js";
 import { CoValueCore } from "./exports.js";
-import { RawCoID } from "./ids.js";
+import { RawCoID, SessionID } from "./ids.js";
 import { CoValueKnownState } from "./knownState.js";
 import { logger } from "./logger.js";
 import {
@@ -185,6 +185,17 @@ export class PeerState {
 
   pushOutgoingMessage(msg: SyncMessage) {
     this.peer.outgoing.push(msg);
+  }
+
+  private sentSignatureMismatches = new Set<string>();
+
+  shouldSendSignatureMismatch(id: RawCoID, sessionID: SessionID): boolean {
+    const key = `${id}::${sessionID}`;
+    if (this.sentSignatureMismatches.has(key)) {
+      return false;
+    }
+    this.sentSignatureMismatches.add(key);
+    return true;
   }
 
   closeListeners = new Set<() => void>();
