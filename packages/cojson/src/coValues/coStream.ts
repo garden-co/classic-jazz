@@ -104,7 +104,10 @@ export class RawCoStreamView<
 
   /** @internal */
   processNewTransactions() {
-    const changeEntries = new Set<CoStreamItem<Item>[]>();
+    // Session streams whose appended items arrived out of time order (rare):
+    // only these need a re-sort; in-order appends keep the sorted invariant
+    // by themselves.
+    const unsortedEntries = new Set<CoStreamItem<Item>[]>();
 
     const newValidTransactions = this.core.getValidTransactions({
       ignorePrivateTransactions: false,
@@ -130,12 +133,16 @@ export class RawCoStreamView<
           entries = [];
           this.items[txID.sessionID] = entries;
         }
-        entries.push({ value: change, madeAt, tx: txID });
-        changeEntries.add(entries);
+        const item = { value: change, madeAt, tx: txID };
+        const last = entries[entries.length - 1];
+        if (last && this.compareStreamItems(last, item) > 0) {
+          unsortedEntries.add(entries);
+        }
+        entries.push(item);
       }
     }
 
-    for (const entries of changeEntries) {
+    for (const entries of unsortedEntries) {
       entries.sort(this.compareStreamItems);
     }
 

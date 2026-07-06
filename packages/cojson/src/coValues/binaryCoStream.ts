@@ -45,6 +45,16 @@ export class RawBinaryCoStreamView<
   totalValidTransactions: number = 0;
   version: number = 0;
   private chunks: string[];
+  /**
+   * Incrementally decoded prefix of `chunks`, maintained only while the
+   * stream is unfinished so that download-progress polling
+   * (`getBinaryChunks(allowUnfinished)` per update) decodes each chunk once
+   * instead of re-decoding the whole file on every read. Dropped as soon as
+   * the stream ends: finished files are decoded fresh per read (typically
+   * exactly once, e.g. `toBlob`), so nothing is retained long-term. The
+   * buffers are shared across polling reads and must be treated as immutable.
+   */
+  private decodedChunks: Uint8Array<ArrayBuffer>[];
   private start: BinaryStreamStart | undefined;
   private ended: boolean;
 
@@ -53,6 +63,7 @@ export class RawBinaryCoStreamView<
 
   private resetInternalState() {
     this.chunks = [];
+    this.decodedChunks = [];
     this.start = undefined;
     this.ended = false;
     this.knownTransactions = { [this.core.id]: 0 };
@@ -69,6 +80,7 @@ export class RawBinaryCoStreamView<
     this.core = core;
     this.ended = false;
     this.chunks = [];
+    this.decodedChunks = [];
     this.knownTransactions = { [core.id]: 0 };
     this.atFrontierFilter = options?.atFrontierFilter;
     this.processNewTransactions();
@@ -137,6 +149,12 @@ export class RawBinaryCoStreamView<
       }
     }
 
+    if (this.ended) {
+      // The progress-polling decode cache is only worth its memory while the
+      // stream is still growing
+      this.decodedChunks = [];
+    }
+
     this.totalValidTransactions += newValidTransactions.length;
   }
 
@@ -167,11 +185,26 @@ export class RawBinaryCoStreamView<
 
     const start = this.start;
 
+    let chunks: Uint8Array<ArrayBuffer>[];
+    if (this.ended) {
+      // Finished files are read rarely (typically once): decode fresh and
+      // retain nothing
+      chunks = this.chunks.map(base64URLtoBytes);
+    } else {
+      // Unfinished files are polled repeatedly while chunks stream in:
+      // decode only the chunks added since the previous read
+      const decoded = this.decodedChunks;
+      for (let i = decoded.length; i < this.chunks.length; i++) {
+        decoded.push(base64URLtoBytes(this.chunks[i]!));
+      }
+      chunks = decoded.slice();
+    }
+
     return {
       mimeType: start.mimeType,
       fileName: start.fileName,
       totalSizeBytes: start.totalSizeBytes,
-      chunks: this.chunks.map(base64URLtoBytes),
+      chunks,
       finished: this.ended,
     };
   }

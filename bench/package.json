@@ -15,6 +15,7 @@
     "bench:cojson": "vitest bench",
     "bench:colist": "tsx ./colist.load.bench.ts",
     "bench:comap": "tsx ./comap.load.bench.ts",
+    "bench:costream": "tsx ./costream.load.bench.ts",
     "bench:jazz-tools": "pnpm exec tsx ./jazz-tools/comap.create.jazz-tools.bench.ts",
     "bench:filestream:write": "node --experimental-strip-types --no-warnings ./jazz-tools/binaryCoStream.write.bench.ts",
     "bench:filestream:getChunks": "node --experimental-strip-types --no-warnings ./jazz-tools/filestream.getChunks.bench.ts",
