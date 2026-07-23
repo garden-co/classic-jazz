@@ -1,6 +1,6 @@
 {
   "name": "cojson-core-rn",
-  "version": "0.20.19",
+  "version": "0.20.20",
   "description": "cojson core for react native",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",

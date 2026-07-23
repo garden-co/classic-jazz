@@ -1,6 +1,6 @@
 {
   "name": "passkey-rn",
-  "version": "0.0.24",
+  "version": "0.0.25",
   "private": true,
   "main": "index.js",
   "scripts": {

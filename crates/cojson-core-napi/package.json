@@ -1,6 +1,6 @@
 {
   "name": "cojson-core-napi",
-  "version": "0.20.19",
+  "version": "0.20.20",
   "description": "Node.js N-API bindings for the cojson-core Rust library, providing high-performance.",
   "main": "index.js",
   "license": "MIT",

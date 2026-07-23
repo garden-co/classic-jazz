@@ -1,5 +1,15 @@
 # jazz-tools
 
+## 0.20.20
+
+### Patch Changes
+
+- ea0ca5c: Preserve active browser sessions whose transactions have not yet been persisted instead of reclaiming their session slots.
+- 9385ad4: Keep Better Auth client plugin callback types host-defined and expose only stable Jazz schema metadata for server-plugin inference.
+  - cojson@0.20.20
+  - cojson-storage-indexeddb@0.20.20
+  - cojson-transport-ws@0.20.20
+
 ## 0.20.19
 
 ### Patch Changes

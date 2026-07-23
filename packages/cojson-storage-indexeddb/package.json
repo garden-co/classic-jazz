@@ -1,6 +1,6 @@
 {
   "name": "cojson-storage-indexeddb",
-  "version": "0.20.19",
+  "version": "0.20.20",
   "main": "dist/index.js",
   "type": "module",
   "types": "dist/index.d.ts",
