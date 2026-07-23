@@ -1,5 +1,13 @@
 # clerk-svelte
 
+## 0.0.19
+
+### Patch Changes
+
+- Updated dependencies [ea0ca5c]
+- Updated dependencies [9385ad4]
+  - jazz-tools@0.20.20
+
 ## 0.0.18
 
 ### Patch Changes

@@ -5,7 +5,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "license": "MIT",
-  "version": "0.20.19",
+  "version": "0.20.20",
   "scripts": {
     "format-and-lint": "biome check .",
     "format-and-lint:fix": "biome check . --write",
