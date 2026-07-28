@@ -68,11 +68,38 @@ export class RawCoMap<
   totalValidTransactions: number = 0;
   version: number = 0;
 
+  /**
+   * True when this coMap's `ops`/`latest` are fed by the native (Rust-resident)
+   * materializer via {@link consumeNativeDelta} instead of the TS
+   * {@link processNewTransactions} walk over `getValidTransactions`. Set once at
+   * construction from {@link CoValueCore.isNativeCoMap} — plain `comap`s with a
+   * non-`group` ruleset that are NOT branched, on a binding that exposes the
+   * stage-2b surface. Groups and accounts (which extend this class) keep the TS
+   * path because their ruleset IS `group`; branched coMaps keep it because their
+   * merge folds a source's `getValidTransactions`.
+   */
+  readonly nativeMaterialization: boolean;
+
+  /**
+   * Refcount of `sessionID:txIndex` -> number of ops currently in `ops` that
+   * come from that transaction. Drives {@link totalValidTransactions} (its
+   * `size` = distinct contributing valid transactions) under the native path,
+   * where the rich delta replaces a key's whole op-list at once. Unused on the
+   * TS path.
+   */
+  #nativeTxRefcount = new Map<string, number>();
+  /** Whether the native view has been materialized into this content at least
+   * once — the first materialization does NOT bump {@link version} (it is the
+   * initial build, like the TS constructor's first `processNewTransactions`);
+   * later full rebuilds (`reset` deltas) do. */
+  #nativeMaterializedOnce = false;
+
   protected resetInternalState() {
     this.ops = {};
     this.latest = {};
     this.knownTransactions = { [this.core.id]: 0 };
     this.totalValidTransactions = 0;
+    this.#nativeTxRefcount.clear();
   }
 
   /** @internal */
@@ -97,10 +124,90 @@ export class RawCoMap<
     this.ignorePrivateTransactions =
       options?.ignorePrivateTransactions ?? false;
 
-    this.processNewTransactions();
+    // The native path can't honor `ignorePrivateTransactions` (the Rust view
+    // always materializes decrypted private txs), but plain coMaps are never
+    // constructed with it — only groups/accounts (TS path) are. Guard anyway.
+    this.nativeMaterialization =
+      !this.ignorePrivateTransactions && this.core.isNativeCoMap();
+
+    if (this.nativeMaterialization) {
+      this.core.materializeNativeCoMapContent(this);
+    } else {
+      this.processNewTransactions();
+    }
+  }
+
+  /**
+   * Rebuild `ops`/`latest` from a native RICH delta (`{version, reset,
+   * changedKeys}`, each `changedKeys[k]` a full `MapOp[]` already in
+   * `compareTransactions` order). On `reset` the store is cleared and rebuilt;
+   * otherwise each changed key's op-list is replaced wholesale (the only way the
+   * native path removes ops from a key is a `reset`). The resulting `MapOp`
+   * shape is byte-identical to the TS path's, so every reader
+   * (`getRaw`/`editsAt`/`atTime`/`atFrontier`/…) is unchanged.
+   */
+  consumeNativeDelta(delta: {
+    version: number;
+    reset: boolean;
+    changedKeys: Record<string, MapOp<keyof Shape & string, JsonValue>[]>;
+  }) {
+    if (delta.reset) {
+      // A full recompute after the initial build is a rebuild (fww flip, verdict
+      // flip, or a private key arriving) — bump `version` exactly as the TS path
+      // does in `rebuildFromCore`.
+      if (this.#nativeMaterializedOnce) {
+        this.version += 1;
+      }
+      this.ops = {};
+      this.latest = {};
+      this.#nativeTxRefcount.clear();
+    }
+
+    const ops = this.ops as Record<
+      string,
+      MapOp<keyof Shape & string, JsonValue>[]
+    >;
+    const latest = this.latest as Record<
+      string,
+      MapOp<keyof Shape & string, JsonValue> | undefined
+    >;
+
+    for (const key in delta.changedKeys) {
+      const opList = delta.changedKeys[key]!;
+      const previous = ops[key];
+      if (previous) {
+        for (const op of previous) this.#decNativeTxRef(op.txID);
+      }
+      ops[key] = opList;
+      for (const op of opList) this.#incNativeTxRef(op.txID);
+      latest[key] = opList.length > 0 ? opList[opList.length - 1] : undefined;
+    }
+
+    this.totalValidTransactions = this.#nativeTxRefcount.size;
+    this.#nativeMaterializedOnce = true;
+  }
+
+  #incNativeTxRef(txID: TransactionID) {
+    const k = `${txID.sessionID}:${txID.txIndex}`;
+    this.#nativeTxRefcount.set(k, (this.#nativeTxRefcount.get(k) ?? 0) + 1);
+  }
+
+  #decNativeTxRef(txID: TransactionID) {
+    const k = `${txID.sessionID}:${txID.txIndex}`;
+    const n = (this.#nativeTxRefcount.get(k) ?? 0) - 1;
+    if (n <= 0) this.#nativeTxRefcount.delete(k);
+    else this.#nativeTxRefcount.set(k, n);
   }
 
   processNewTransactions() {
+    // Under the native path the core drives materialization through
+    // `consumeNativeDelta`; the TS walk is a no-op here (callers like `set`/
+    // `assign`/`delete` still invoke it after `makeTransaction`, but the core's
+    // own `processNewTransactions` already pushed the native delta).
+    if (this.nativeMaterialization) {
+      return;
+    }
+
     if (this.isTimeTravelEntity()) {
       throw new Error("Cannot process transactions on a time travel entity");
     }
@@ -165,6 +272,17 @@ export class RawCoMap<
   handleNewTransaction(transaction: DecryptedTransaction) {}
 
   rebuildFromCore() {
+    if (this.nativeMaterialization) {
+      // Full re-pull from the native view. `version` is bumped by
+      // `consumeNativeDelta` on the `reset` this triggers (so we don't double
+      // it here).
+      this.resetInternalState();
+      this.#nativeMaterializedOnce = false;
+      this.version += 1;
+      this.core.materializeNativeCoMapContent(this);
+      return;
+    }
+
     this.version += 1;
 
     this.resetInternalState();

@@ -4,7 +4,18 @@ use thiserror::Error;
 
 #[derive(Error, Debug, uniffi::Error)]
 pub enum SessionMapError {
-    #[error("SessionMap error: {0}")]
+    /// Wraps any inner `cojson-core` error's `Display` output VERBATIM — no
+    /// added prefix. This is load-bearing once `NodeCore` (node_core.rs)
+    /// reuses this same variant for its registry-lookup errors: TS-side error
+    /// translation does `message.startsWith("CoValue not loaded: ")`
+    /// (packages/cojson/src/permissions.ts:322) and matches `"Unknown CoValue: "`
+    /// similarly, so a wrapped format like the previous `"SessionMap error: {0}"`
+    /// would silently break that match by shifting the prefix. Kept as a plain
+    /// format string rather than `#[error(transparent)]`, since `String` doesn't
+    /// implement `std::error::Error`; kept as one variant rather than adding a
+    /// parallel one, since nothing in the tree depended on the old
+    /// "SessionMap error: " prefix text.
+    #[error("{0}")]
     Internal(String),
     #[error("Failed to acquire lock")]
     LockError,
@@ -33,6 +44,10 @@ pub struct SessionMap {
     internal: std::sync::Mutex<SessionMapImpl>,
 }
 
+// NOTE: a parallel copy of every method body below lives in `impl NodeCore`
+// (node_core.rs, co_id-first). When editing a method here, update its
+// NodeCore twin too — see the matching breadcrumb on `impl NodeCore` in that
+// file.
 #[uniffi::export]
 impl SessionMap {
     /// Create a new SessionMap for a CoValue

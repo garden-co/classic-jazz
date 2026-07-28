@@ -196,11 +196,321 @@ function passArray8ToWasm0(arg, malloc) {
     WASM_VECTOR_LEN = arg.length;
     return ptr;
 }
+/**
+ * WASM-exposed function to verify an Ed25519 signature.
+ * - `verifying_key`: 32 bytes of verifying key material
+ * - `message`: Raw bytes that were signed
+ * - `signature`: 64 bytes of signature material
+ * Returns true if signature is valid, false otherwise, or throws JsError if verification fails.
+ * @param {Uint8Array} verifying_key
+ * @param {Uint8Array} message
+ * @param {Uint8Array} signature
+ * @returns {boolean}
+ */
+export function ed25519Verify(verifying_key, message, signature) {
+    const ptr0 = passArray8ToWasm0(verifying_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(message, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(signature, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.ed25519Verify(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] !== 0;
+}
 
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
 }
+/**
+ * WASM-exposed function to sign a message with an Ed25519 signing key.
+ * - `signing_key`: 32 bytes of signing key material
+ * - `message`: Raw bytes to sign
+ * Returns 64 bytes of signature material or throws JsError if signing fails.
+ * @param {Uint8Array} signing_key
+ * @param {Uint8Array} message
+ * @returns {Uint8Array}
+ */
+export function ed25519SigningKeySign(signing_key, message) {
+    const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(message, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.ed25519SigningKeySign(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * WASM-exposed function to validate and copy Ed25519 signing key bytes.
+ * - `bytes`: 32 bytes of signing key material to validate
+ * Returns the same 32 bytes if valid or throws JsError if invalid.
+ * @param {Uint8Array} bytes
+ * @returns {Uint8Array}
+ */
+export function ed25519SigningKeyFromBytes(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ed25519SigningKeyFromBytes(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * WASM-exposed function to sign a message using Ed25519.
+ * - `signing_key`: 32 bytes of signing key material
+ * - `message`: Raw bytes to sign
+ * Returns 64 bytes of signature material or throws JsError if signing fails.
+ * @param {Uint8Array} signing_key
+ * @param {Uint8Array} message
+ * @returns {Uint8Array}
+ */
+export function ed25519Sign(signing_key, message) {
+    const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(message, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.ed25519Sign(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * WASM-exposed function to validate and copy Ed25519 signature bytes.
+ * - `bytes`: 64 bytes of signature material to validate
+ * Returns the same 64 bytes if valid or throws JsError if invalid.
+ * @param {Uint8Array} bytes
+ * @returns {Uint8Array}
+ */
+export function ed25519SignatureFromBytes(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ed25519SignatureFromBytes(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * WASM-exposed function to validate and copy Ed25519 verifying key bytes.
+ * - `bytes`: 32 bytes of verifying key material to validate
+ * Returns the same 32 bytes if valid or throws JsError if invalid.
+ * @param {Uint8Array} bytes
+ * @returns {Uint8Array}
+ */
+export function ed25519VerifyingKeyFromBytes(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ed25519VerifyingKeyFromBytes(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * Generate a new Ed25519 signing key using secure random number generation.
+ * Returns 32 bytes of raw key material suitable for use with other Ed25519 functions.
+ * @returns {Uint8Array}
+ */
+export function newEd25519SigningKey() {
+    const ret = wasm.newEd25519SigningKey();
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * WASM-exposed function to derive the public key from an Ed25519 signing key.
+ * - `signing_key`: 32 bytes of signing key material
+ * Returns 32 bytes of public key material or throws JsError if key is invalid.
+ * @param {Uint8Array} signing_key
+ * @returns {Uint8Array}
+ */
+export function ed25519SigningKeyToPublic(signing_key) {
+    const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ed25519SigningKeyToPublic(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * WASM-exposed function to derive an Ed25519 verifying key from a signing key.
+ * - `signing_key`: 32 bytes of signing key material
+ * Returns 32 bytes of verifying key material or throws JsError if key is invalid.
+ * @param {Uint8Array} signing_key
+ * @returns {Uint8Array}
+ */
+export function ed25519VerifyingKey(signing_key) {
+    const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ed25519VerifyingKey(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * WASM-exposed function for XSalsa20 decryption without authentication.
+ * - `key`: 32-byte key for decryption (must match encryption key)
+ * - `nonce_material`: Raw bytes used to generate a 24-byte nonce (must match encryption)
+ * - `ciphertext`: Encrypted bytes to decrypt
+ * Returns the decrypted bytes or throws a JsError if decryption fails.
+ * Note: This function does not provide authentication. Use decrypt_xsalsa20_poly1305 for authenticated decryption.
+ * @param {Uint8Array} key
+ * @param {Uint8Array} nonce_material
+ * @param {Uint8Array} ciphertext
+ * @returns {Uint8Array}
+ */
+export function decryptXsalsa20(key, nonce_material, ciphertext) {
+    const ptr0 = passArray8ToWasm0(key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(nonce_material, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(ciphertext, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.decryptXsalsa20(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * WASM-exposed function for XSalsa20 encryption without authentication.
+ * - `key`: 32-byte key for encryption
+ * - `nonce_material`: Raw bytes used to generate a 24-byte nonce via BLAKE3
+ * - `plaintext`: Raw bytes to encrypt
+ * Returns the encrypted bytes or throws a JsError if encryption fails.
+ * Note: This function does not provide authentication. Use encrypt_xsalsa20_poly1305 for authenticated encryption.
+ * @param {Uint8Array} key
+ * @param {Uint8Array} nonce_material
+ * @param {Uint8Array} plaintext
+ * @returns {Uint8Array}
+ */
+export function encryptXsalsa20(key, nonce_material, plaintext) {
+    const ptr0 = passArray8ToWasm0(key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(nonce_material, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(plaintext, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.encryptXsalsa20(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * Hash data once using BLAKE3.
+ * - `data`: Raw bytes to hash
+ * Returns 32 bytes of hash output.
+ * This is the simplest way to compute a BLAKE3 hash of a single piece of data.
+ * @param {Uint8Array} data
+ * @returns {Uint8Array}
+ */
+export function blake3HashOnce(data) {
+    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.blake3HashOnce(ptr0, len0);
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * Generate a 24-byte nonce from input material using BLAKE3.
+ * - `nonce_material`: Raw bytes to derive the nonce from
+ * Returns 24 bytes suitable for use as a nonce in cryptographic operations.
+ * This function is deterministic - the same input will produce the same nonce.
+ * @param {Uint8Array} nonce_material
+ * @returns {Uint8Array}
+ */
+export function generateNonce(nonce_material) {
+    const ptr0 = passArray8ToWasm0(nonce_material, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.generateNonce(ptr0, len0);
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * Compute a short hash of a stable-stringified JSON value.
+ * The input should already be serialized using stableStringify on the JS side.
+ * Returns a string prefixed with "shortHash_z" followed by base58-encoded hash.
+ * @param {string} value
+ * @returns {string}
+ */
+export function shortHash(value) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(value, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.shortHash(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Hash data once using BLAKE3 with a context prefix.
+ * - `data`: Raw bytes to hash
+ * - `context`: Context bytes to prefix to the data
+ * Returns 32 bytes of hash output.
+ * This is useful for domain separation - the same data hashed with different contexts will produce different outputs.
+ * @param {Uint8Array} data
+ * @param {Uint8Array} context
+ * @returns {Uint8Array}
+ */
+export function blake3HashOnceWithContext(data, context) {
+    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(context, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.blake3HashOnceWithContext(ptr0, len0, ptr1, len1);
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
 /**
  * WASM-exposed function for unsealing a message using X25519 + XSalsa20-Poly1305.
  * Provides authenticated decryption with perfect forward secrecy.
@@ -459,62 +769,6 @@ export function decrypt(ciphertext, key_secret, nonce_material) {
 }
 
 /**
- * WASM-exposed function for XSalsa20 decryption without authentication.
- * - `key`: 32-byte key for decryption (must match encryption key)
- * - `nonce_material`: Raw bytes used to generate a 24-byte nonce (must match encryption)
- * - `ciphertext`: Encrypted bytes to decrypt
- * Returns the decrypted bytes or throws a JsError if decryption fails.
- * Note: This function does not provide authentication. Use decrypt_xsalsa20_poly1305 for authenticated decryption.
- * @param {Uint8Array} key
- * @param {Uint8Array} nonce_material
- * @param {Uint8Array} ciphertext
- * @returns {Uint8Array}
- */
-export function decryptXsalsa20(key, nonce_material, ciphertext) {
-    const ptr0 = passArray8ToWasm0(key, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(nonce_material, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passArray8ToWasm0(ciphertext, wasm.__wbindgen_malloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.decryptXsalsa20(ptr0, len0, ptr1, len1, ptr2, len2);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v4;
-}
-
-/**
- * WASM-exposed function for XSalsa20 encryption without authentication.
- * - `key`: 32-byte key for encryption
- * - `nonce_material`: Raw bytes used to generate a 24-byte nonce via BLAKE3
- * - `plaintext`: Raw bytes to encrypt
- * Returns the encrypted bytes or throws a JsError if encryption fails.
- * Note: This function does not provide authentication. Use encrypt_xsalsa20_poly1305 for authenticated encryption.
- * @param {Uint8Array} key
- * @param {Uint8Array} nonce_material
- * @param {Uint8Array} plaintext
- * @returns {Uint8Array}
- */
-export function encryptXsalsa20(key, nonce_material, plaintext) {
-    const ptr0 = passArray8ToWasm0(key, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(nonce_material, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passArray8ToWasm0(plaintext, wasm.__wbindgen_malloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.encryptXsalsa20(ptr0, len0, ptr1, len1, ptr2, len2);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v4;
-}
-
-/**
  * WASM-exposed function to sign a message using Ed25519.
  * - `message`: Raw bytes to sign
  * - `secret`: Raw Ed25519 signing key bytes
@@ -599,261 +853,6 @@ export function verify(signature, message, id) {
     return ret[0] !== 0;
 }
 
-/**
- * Hash data once using BLAKE3.
- * - `data`: Raw bytes to hash
- * Returns 32 bytes of hash output.
- * This is the simplest way to compute a BLAKE3 hash of a single piece of data.
- * @param {Uint8Array} data
- * @returns {Uint8Array}
- */
-export function blake3HashOnce(data) {
-    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.blake3HashOnce(ptr0, len0);
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
-}
-
-/**
- * Generate a 24-byte nonce from input material using BLAKE3.
- * - `nonce_material`: Raw bytes to derive the nonce from
- * Returns 24 bytes suitable for use as a nonce in cryptographic operations.
- * This function is deterministic - the same input will produce the same nonce.
- * @param {Uint8Array} nonce_material
- * @returns {Uint8Array}
- */
-export function generateNonce(nonce_material) {
-    const ptr0 = passArray8ToWasm0(nonce_material, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.generateNonce(ptr0, len0);
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
-}
-
-/**
- * Compute a short hash of a stable-stringified JSON value.
- * The input should already be serialized using stableStringify on the JS side.
- * Returns a string prefixed with "shortHash_z" followed by base58-encoded hash.
- * @param {string} value
- * @returns {string}
- */
-export function shortHash(value) {
-    let deferred2_0;
-    let deferred2_1;
-    try {
-        const ptr0 = passStringToWasm0(value, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.shortHash(ptr0, len0);
-        deferred2_0 = ret[0];
-        deferred2_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
-    } finally {
-        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
-    }
-}
-
-/**
- * Hash data once using BLAKE3 with a context prefix.
- * - `data`: Raw bytes to hash
- * - `context`: Context bytes to prefix to the data
- * Returns 32 bytes of hash output.
- * This is useful for domain separation - the same data hashed with different contexts will produce different outputs.
- * @param {Uint8Array} data
- * @param {Uint8Array} context
- * @returns {Uint8Array}
- */
-export function blake3HashOnceWithContext(data, context) {
-    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(context, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.blake3HashOnceWithContext(ptr0, len0, ptr1, len1);
-    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v3;
-}
-
-/**
- * WASM-exposed function to verify an Ed25519 signature.
- * - `verifying_key`: 32 bytes of verifying key material
- * - `message`: Raw bytes that were signed
- * - `signature`: 64 bytes of signature material
- * Returns true if signature is valid, false otherwise, or throws JsError if verification fails.
- * @param {Uint8Array} verifying_key
- * @param {Uint8Array} message
- * @param {Uint8Array} signature
- * @returns {boolean}
- */
-export function ed25519Verify(verifying_key, message, signature) {
-    const ptr0 = passArray8ToWasm0(verifying_key, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(message, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passArray8ToWasm0(signature, wasm.__wbindgen_malloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.ed25519Verify(ptr0, len0, ptr1, len1, ptr2, len2);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return ret[0] !== 0;
-}
-
-/**
- * WASM-exposed function to sign a message with an Ed25519 signing key.
- * - `signing_key`: 32 bytes of signing key material
- * - `message`: Raw bytes to sign
- * Returns 64 bytes of signature material or throws JsError if signing fails.
- * @param {Uint8Array} signing_key
- * @param {Uint8Array} message
- * @returns {Uint8Array}
- */
-export function ed25519SigningKeySign(signing_key, message) {
-    const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(message, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.ed25519SigningKeySign(ptr0, len0, ptr1, len1);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v3;
-}
-
-/**
- * WASM-exposed function to validate and copy Ed25519 signing key bytes.
- * - `bytes`: 32 bytes of signing key material to validate
- * Returns the same 32 bytes if valid or throws JsError if invalid.
- * @param {Uint8Array} bytes
- * @returns {Uint8Array}
- */
-export function ed25519SigningKeyFromBytes(bytes) {
-    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.ed25519SigningKeyFromBytes(ptr0, len0);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
-}
-
-/**
- * WASM-exposed function to sign a message using Ed25519.
- * - `signing_key`: 32 bytes of signing key material
- * - `message`: Raw bytes to sign
- * Returns 64 bytes of signature material or throws JsError if signing fails.
- * @param {Uint8Array} signing_key
- * @param {Uint8Array} message
- * @returns {Uint8Array}
- */
-export function ed25519Sign(signing_key, message) {
-    const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(message, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.ed25519Sign(ptr0, len0, ptr1, len1);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v3;
-}
-
-/**
- * WASM-exposed function to validate and copy Ed25519 signature bytes.
- * - `bytes`: 64 bytes of signature material to validate
- * Returns the same 64 bytes if valid or throws JsError if invalid.
- * @param {Uint8Array} bytes
- * @returns {Uint8Array}
- */
-export function ed25519SignatureFromBytes(bytes) {
-    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.ed25519SignatureFromBytes(ptr0, len0);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
-}
-
-/**
- * WASM-exposed function to validate and copy Ed25519 verifying key bytes.
- * - `bytes`: 32 bytes of verifying key material to validate
- * Returns the same 32 bytes if valid or throws JsError if invalid.
- * @param {Uint8Array} bytes
- * @returns {Uint8Array}
- */
-export function ed25519VerifyingKeyFromBytes(bytes) {
-    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.ed25519VerifyingKeyFromBytes(ptr0, len0);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
-}
-
-/**
- * Generate a new Ed25519 signing key using secure random number generation.
- * Returns 32 bytes of raw key material suitable for use with other Ed25519 functions.
- * @returns {Uint8Array}
- */
-export function newEd25519SigningKey() {
-    const ret = wasm.newEd25519SigningKey();
-    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v1;
-}
-
-/**
- * WASM-exposed function to derive the public key from an Ed25519 signing key.
- * - `signing_key`: 32 bytes of signing key material
- * Returns 32 bytes of public key material or throws JsError if key is invalid.
- * @param {Uint8Array} signing_key
- * @returns {Uint8Array}
- */
-export function ed25519SigningKeyToPublic(signing_key) {
-    const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.ed25519SigningKeyToPublic(ptr0, len0);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
-}
-
-/**
- * WASM-exposed function to derive an Ed25519 verifying key from a signing key.
- * - `signing_key`: 32 bytes of signing key material
- * Returns 32 bytes of verifying key material or throws JsError if key is invalid.
- * @param {Uint8Array} signing_key
- * @returns {Uint8Array}
- */
-export function ed25519VerifyingKey(signing_key) {
-    const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.ed25519VerifyingKey(ptr0, len0);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
-}
-
 const Blake3HasherFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_blake3hasher_free(ptr >>> 0, 1));
@@ -908,6 +907,836 @@ export class Blake3Hasher {
         var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
         wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
         return v1;
+    }
+}
+
+const NodeCoreFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_nodecore_free(ptr >>> 0, 1));
+
+export class NodeCore {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        NodeCoreFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_nodecore_free(ptr, 0);
+    }
+    /**
+     * Get the header as JSON
+     * @param {string} co_id
+     * @returns {string}
+     */
+    getHeader(co_id) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.nodecore_getHeader(this.__wbg_ptr, ptr0, len0);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * Check if this CoValue is deleted
+     * @param {string} co_id
+     * @returns {boolean}
+     */
+    isDeleted(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_isDeleted(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
+    }
+    /**
+     * Boundary (a): JSON value for `key` at `at_time` (ms; omit for latest).
+     * @param {string} co_id
+     * @param {string} key
+     * @param {number | null} [at_time]
+     * @returns {string | undefined}
+     */
+    mapGetAt(co_id, key, at_time) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(key, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_mapGetAt(this.__wbg_ptr, ptr0, len0, ptr1, len1, !isLikeNone(at_time), isLikeNone(at_time) ? 0 : at_time);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v3;
+        if (ret[0] !== 0) {
+            v3 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v3;
+    }
+    /**
+     * @param {string} co_id
+     * @returns {boolean}
+     */
+    hasCoValue(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_hasCoValue(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
+     * Check whether the CoValue still has pending streaming content.
+     * @param {string} co_id
+     * @returns {boolean}
+     */
+    isStreaming(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_isStreaming(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
+    }
+    /**
+     * Boundary (b): whole materialized map as a JSON object string.
+     * @param {string} co_id
+     * @returns {string}
+     */
+    mapSnapshot(co_id) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.nodecore_mapSnapshot(this.__wbg_ptr, ptr0, len0);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * @returns {number}
+     */
+    coValueCount() {
+        const ret = wasm.nodecore_coValueCount(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * Whether a secret for `key_id` has been provided.
+     * @param {string} key_id
+     * @returns {boolean}
+     */
+    hasKeySecret(key_id) {
+        const ptr0 = passStringToWasm0(key_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_hasKeySecret(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
+     * Boundary (c-rich): `{version, reset, changedKeys}` since `since_version`,
+     * each `changedKeys[k]` the full `MapOp[]` op-list — the payload a TS
+     * `RawCoMap` rebuilds `ops`/`latest` from.
+     * @param {string} co_id
+     * @param {number} since_version
+     * @returns {string}
+     */
+    mapDeltaRich(co_id, since_version) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.nodecore_mapDeltaRich(this.__wbg_ptr, ptr0, len0, since_version);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * Creates or replaces; replacing drops the previous session state.
+     * Mirrors TS semantics where constructing a new VerifiedState for an
+     * already-known id creates a fresh SessionMap.
+     * @param {string} co_id
+     * @param {string} header_json
+     * @param {number | null} [max_tx_size]
+     * @param {boolean | null} [skip_verify]
+     */
+    createCoValue(co_id, header_json, max_tx_size, skip_verify) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(header_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_createCoValue(this.__wbg_ptr, ptr0, len0, ptr1, len1, isLikeNone(max_tx_size) ? 0x100000001 : (max_tx_size) >>> 0, isLikeNone(skip_verify) ? 0xFFFFFF : skip_verify ? 1 : 0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Get the known state as a native JavaScript object
+     * @param {string} co_id
+     * @returns {any}
+     */
+    getKnownState(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_getKnownState(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Get all session IDs as native array
+     * @param {string} co_id
+     * @returns {string[]}
+     */
+    getSessionIds(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_getSessionIds(this.__wbg_ptr, ptr0, len0);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v2;
+    }
+    /**
+     * Get single transaction by index as JSON string (returns undefined if not found)
+     * @param {string} co_id
+     * @param {string} session_id
+     * @param {number} tx_index
+     * @returns {string | undefined}
+     */
+    getTransaction(co_id, session_id, tx_index) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_getTransaction(this.__wbg_ptr, ptr0, len0, ptr1, len1, tx_index);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v3;
+        if (ret[0] !== 0) {
+            v3 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v3;
+    }
+    /**
+     * Materialize (or incrementally refresh) `co_id`'s coMap view; returns the
+     * current monotonic version. `pending` is a `JsValue` array of
+     * `PendingTxWire` objects (same shape as `validateTransactions`).
+     * @param {string} co_id
+     * @param {any} pending
+     * @returns {number}
+     */
+    mapMaterialize(co_id, pending) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_mapMaterialize(this.__wbg_ptr, ptr0, len0, pending);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0];
+    }
+    /**
+     * Mark this CoValue as deleted
+     * @param {string} co_id
+     */
+    markAsDeleted(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_markAsDeleted(this.__wbg_ptr, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * The `KeyID`s `co_id`'s materialized view still needs a secret for.
+     * @param {string} co_id
+     * @returns {string[]}
+     */
+    missingKeyIds(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_missingKeyIds(this.__wbg_ptr, ptr0, len0);
+        var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v2;
+    }
+    /**
+     * @param {string} co_id
+     * @returns {boolean}
+     */
+    removeCoValue(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_removeCoValue(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
+    }
+    /**
+     * Add transactions to a session
+     * @param {string} co_id
+     * @param {string} session_id
+     * @param {string | null | undefined} signer_id
+     * @param {string} transactions_json
+     * @param {string} signature
+     * @param {boolean} skip_verify
+     */
+    addTransactions(co_id, session_id, signer_id, transactions_json, signature, skip_verify) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        var ptr2 = isLikeNone(signer_id) ? 0 : passStringToWasm0(signer_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len2 = WASM_VECTOR_LEN;
+        const ptr3 = passStringToWasm0(transactions_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len3 = WASM_VECTOR_LEN;
+        const ptr4 = passStringToWasm0(signature, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len4 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_addTransactions(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, skip_verify);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Drop the cached validation engine for `co_id`, forcing a full recompute
+     * on the next `validateTransactions` / `roleOf`. An absent `co_id` is a
+     * no-op (not `UnknownCoValue`): callers invoke this on dependants that may
+     * never have been registered on this node, so erroring would be hostile.
+     * @param {string} co_id
+     */
+    resetValidation(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.nodecore_resetValidation(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * Get last signature for a session (returns undefined if session not found)
+     * @param {string} co_id
+     * @param {string} session_id
+     * @returns {string | undefined}
+     */
+    getLastSignature(co_id, session_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_getLastSignature(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v3;
+        if (ret[0] !== 0) {
+            v3 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v3;
+    }
+    /**
+     * Feed a resolved `KeyID -> KeySecret` to the native key store (idempotent).
+     * @param {string} key_id
+     * @param {string} key_secret
+     */
+    provideKeySecret(key_id, key_secret) {
+        const ptr0 = passStringToWasm0(key_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(key_secret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        wasm.nodecore_provideKeySecret(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    }
+    /**
+     * Decrypt transaction changes
+     * @param {string} co_id
+     * @param {string} session_id
+     * @param {number} tx_index
+     * @param {string} key_secret
+     * @returns {string | undefined}
+     */
+    decryptTransaction(co_id, session_id, tx_index, key_secret) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(key_secret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_decryptTransaction(this.__wbg_ptr, ptr0, len0, ptr1, len1, tx_index, ptr2, len2);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v4;
+        if (ret[0] !== 0) {
+            v4 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v4;
+    }
+    /**
+     * Get signature after specific transaction index
+     * @param {string} co_id
+     * @param {string} session_id
+     * @param {number} tx_index
+     * @returns {string | undefined}
+     */
+    getSignatureAfter(co_id, session_id, tx_index) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_getSignatureAfter(this.__wbg_ptr, ptr0, len0, ptr1, len1, tx_index);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v3;
+        if (ret[0] !== 0) {
+            v3 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v3;
+    }
+    /**
+     * Frontier read: latest frontier-visible value of `key` (undefined =
+     * absent). `frontier_json` is `{ sessionID: txCount }`.
+     * @param {string} co_id
+     * @param {string} key
+     * @param {string} frontier_json
+     * @returns {string | undefined}
+     */
+    mapGetAtFrontier(co_id, key, frontier_json) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(key, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(frontier_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_mapGetAtFrontier(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v4;
+        if (ret[0] !== 0) {
+            v4 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v4;
+    }
+    /**
+     * Get transaction count for a session (returns -1 if session not found)
+     * @param {string} co_id
+     * @param {string} session_id
+     * @returns {number}
+     */
+    getTransactionCount(co_id, session_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_getTransactionCount(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0];
+    }
+    /**
+     * Validate a group/account CoValue; verdicts for ALL its transactions in
+     * validation order. `pending` is a `JsValue` array of `PendingTxWire`
+     * objects (see that struct's doc comment for the exact wire shape).
+     * Throws "Unknown CoValue: <id>" if `co_id` itself is not registered, and
+     * "CoValue not loaded: <id>" if a dependency (parent group / owning
+     * account) is missing.
+     * @param {string} co_id
+     * @param {any} pending
+     * @returns {any}
+     */
+    validateTransactions(co_id, pending) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_validateTransactions(this.__wbg_ptr, ptr0, len0, pending);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * R3 stage-1 single-call ingest: add a content chunk's transactions, validate
+     * them in-crate, and materialize the coMap view in ONE crossing — returning
+     * only the compact `IngestOutcomeWire` (`{generation, count, viewVersion,
+     * deltaJson}`), with no per-transaction verdict array. The raw session log is
+     * still written, so TS sync/storage are unaffected. See
+     * `NodeCore::ingest_and_materialize`.
+     * @param {string} co_id
+     * @param {string} session_id
+     * @param {string | null | undefined} signer_id
+     * @param {string} transactions_json
+     * @param {string} signature
+     * @param {boolean} skip_verify
+     * @param {number} since_version
+     * @param {any} pending
+     * @returns {any}
+     */
+    ingestAndMaterialize(co_id, session_id, signer_id, transactions_json, signature, skip_verify, since_version, pending) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        var ptr2 = isLikeNone(signer_id) ? 0 : passStringToWasm0(signer_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len2 = WASM_VECTOR_LEN;
+        const ptr3 = passStringToWasm0(transactions_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len3 = WASM_VECTOR_LEN;
+        const ptr4 = passStringToWasm0(signature, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len4 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_ingestAndMaterialize(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, skip_verify, since_version, pending);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Decrypt transaction meta
+     * @param {string} co_id
+     * @param {string} session_id
+     * @param {number} tx_index
+     * @param {string} key_secret
+     * @returns {string | undefined}
+     */
+    decryptTransactionMeta(co_id, session_id, tx_index, key_secret) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(key_secret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_decryptTransactionMeta(this.__wbg_ptr, ptr0, len0, ptr1, len1, tx_index, ptr2, len2);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v4;
+        if (ret[0] !== 0) {
+            v4 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v4;
+    }
+    /**
+     * Get transactions for a session from index as JSON strings (returns undefined if session not found)
+     * @param {string} co_id
+     * @param {string} session_id
+     * @param {number} from_index
+     * @returns {string[] | undefined}
+     */
+    getSessionTransactions(co_id, session_id, from_index) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_getSessionTransactions(this.__wbg_ptr, ptr0, len0, ptr1, len1, from_index);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v3;
+        if (ret[0] !== 0) {
+            v3 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        }
+        return v3;
+    }
+    /**
+     * Frontier read: whole `{key: latestVisibleValue}` snapshot under
+     * `frontier_json` as a JSON object string.
+     * @param {string} co_id
+     * @param {string} frontier_json
+     * @returns {string}
+     */
+    mapSnapshotAtFrontier(co_id, frontier_json) {
+        let deferred4_0;
+        let deferred4_1;
+        try {
+            const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(frontier_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.nodecore_mapSnapshotAtFrontier(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            var ptr3 = ret[0];
+            var len3 = ret[1];
+            if (ret[3]) {
+                ptr3 = 0; len3 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred4_0 = ptr3;
+            deferred4_1 = len3;
+            return getStringFromWasm0(ptr3, len3);
+        } finally {
+            wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+        }
+    }
+    /**
+     * Set streaming known state
+     * @param {string} co_id
+     * @param {string} streaming_json
+     */
+    setStreamingKnownState(co_id, streaming_json) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(streaming_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_setStreamingKnownState(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Delta counterpart of `validateTransactions`: given the caller's
+     * `(since_generation, since_count)` cursor, return only the verdicts it has
+     * not seen as a `VerdictDeltaWire` (`{generation, fromIndex, verdicts}`). On
+     * a generation match returns `verdicts[since_count..]`; on a mismatch returns
+     * the whole list with `fromIndex = 0`. Same error contract as
+     * `validateTransactions`.
+     * @param {string} co_id
+     * @param {number} since_generation
+     * @param {number} since_count
+     * @param {any} pending
+     * @returns {any}
+     */
+    validateTransactionsDelta(co_id, since_generation, since_count, pending) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_validateTransactionsDelta(this.__wbg_ptr, ptr0, len0, since_generation, since_count, pending);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Create new private transaction (for local writes)
+     * Returns JSON: { signature: string, transaction: Transaction }
+     * @param {string} co_id
+     * @param {string} session_id
+     * @param {string} signer_secret
+     * @param {string} changes_json
+     * @param {string} key_id
+     * @param {string} key_secret
+     * @param {string | null | undefined} meta_json
+     * @param {number} made_at
+     * @returns {string}
+     */
+    makeNewPrivateTransaction(co_id, session_id, signer_secret, changes_json, key_id, key_secret, meta_json, made_at) {
+        let deferred9_0;
+        let deferred9_1;
+        try {
+            const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(signer_secret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len2 = WASM_VECTOR_LEN;
+            const ptr3 = passStringToWasm0(changes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len3 = WASM_VECTOR_LEN;
+            const ptr4 = passStringToWasm0(key_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len4 = WASM_VECTOR_LEN;
+            const ptr5 = passStringToWasm0(key_secret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len5 = WASM_VECTOR_LEN;
+            var ptr6 = isLikeNone(meta_json) ? 0 : passStringToWasm0(meta_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            var len6 = WASM_VECTOR_LEN;
+            const ret = wasm.nodecore_makeNewPrivateTransaction(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, made_at);
+            var ptr8 = ret[0];
+            var len8 = ret[1];
+            if (ret[3]) {
+                ptr8 = 0; len8 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred9_0 = ptr8;
+            deferred9_1 = len8;
+            return getStringFromWasm0(ptr8, len8);
+        } finally {
+            wasm.__wbindgen_free(deferred9_0, deferred9_1, 1);
+        }
+    }
+    /**
+     * Get the last signature checkpoint index (-1 if no checkpoints, undefined if session not found)
+     * @param {string} co_id
+     * @param {string} session_id
+     * @returns {number | undefined}
+     */
+    getLastSignatureCheckpoint(co_id, session_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_getLastSignatureCheckpoint(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] === 0x100000001 ? undefined : ret[0];
+    }
+    /**
+     * Create new trusting transaction (for local writes)
+     * Returns JSON: { signature: string, transaction: Transaction }
+     * @param {string} co_id
+     * @param {string} session_id
+     * @param {string} signer_secret
+     * @param {string} changes_json
+     * @param {string | null | undefined} meta_json
+     * @param {number} made_at
+     * @returns {string}
+     */
+    makeNewTrustingTransaction(co_id, session_id, signer_secret, changes_json, meta_json, made_at) {
+        let deferred7_0;
+        let deferred7_1;
+        try {
+            const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(session_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(signer_secret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len2 = WASM_VECTOR_LEN;
+            const ptr3 = passStringToWasm0(changes_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len3 = WASM_VECTOR_LEN;
+            var ptr4 = isLikeNone(meta_json) ? 0 : passStringToWasm0(meta_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            var len4 = WASM_VECTOR_LEN;
+            const ret = wasm.nodecore_makeNewTrustingTransaction(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, made_at);
+            var ptr6 = ret[0];
+            var len6 = ret[1];
+            if (ret[3]) {
+                ptr6 = 0; len6 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred7_0 = ptr6;
+            deferred7_1 = len6;
+            return getStringFromWasm0(ptr6, len6);
+        } finally {
+            wasm.__wbindgen_free(deferred7_0, deferred7_1, 1);
+        }
+    }
+    /**
+     * Get the known state with streaming as a native JavaScript object
+     * @param {string} co_id
+     * @returns {any}
+     */
+    getKnownStateWithStreaming(co_id) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_getKnownStateWithStreaming(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Create a new empty NodeCore registry (one LocalNode owns one instance).
+     */
+    constructor() {
+        const ret = wasm.nodecore_new();
+        this.__wbg_ptr = ret >>> 0;
+        NodeCoreFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * Boundary (a): latest JSON value for `key`, or undefined.
+     * @param {string} co_id
+     * @param {string} key
+     * @returns {string | undefined}
+     */
+    mapGet(co_id, key) {
+        const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(key, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_mapGet(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v3;
+        if (ret[0] !== 0) {
+            v3 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v3;
+    }
+    /**
+     * Role of member in group at time (ms). Returns the role string or null.
+     * Throws "Unknown CoValue: <id>" if `group_id` itself is not registered,
+     * and "CoValue not loaded: <id>" if a parent group / owning account is
+     * missing.
+     * @param {string} group_id
+     * @param {string} member
+     * @param {number | null} [at_time]
+     * @returns {string | undefined}
+     */
+    roleOf(group_id, member, at_time) {
+        const ptr0 = passStringToWasm0(group_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(member, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.nodecore_roleOf(this.__wbg_ptr, ptr0, len0, ptr1, len1, !isLikeNone(at_time), isLikeNone(at_time) ? 0 : at_time);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        let v3;
+        if (ret[0] !== 0) {
+            v3 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v3;
+    }
+    /**
+     * Boundary (c): `{version, changedKeys, deletedKeys}` since `since_version`.
+     * @param {string} co_id
+     * @param {number} since_version
+     * @returns {string}
+     */
+    mapDelta(co_id, since_version) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(co_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.nodecore_mapDelta(this.__wbg_ptr, ptr0, len0, since_version);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
     }
 }
 
@@ -1323,6 +2152,10 @@ function __wbg_get_imports() {
         const ret = arg0.crypto;
         return ret;
     };
+    imports.wbg.__wbg_done_769e5ede4b31c67b = function(arg0) {
+        const ret = arg0.done;
+        return ret;
+    };
     imports.wbg.__wbg_dumpWasmPanic_a39b8272e193aa3d = function(arg0, arg1) {
         dumpWasmPanic(getStringFromWasm0(arg0, arg1));
     };
@@ -1340,6 +2173,58 @@ function __wbg_get_imports() {
     imports.wbg.__wbg_getRandomValues_b8f5dbd5f3995a9e = function() { return handleError(function (arg0, arg1) {
         arg0.getRandomValues(arg1);
     }, arguments) };
+    imports.wbg.__wbg_get_67b2ba62fc30de12 = function() { return handleError(function (arg0, arg1) {
+        const ret = Reflect.get(arg0, arg1);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_get_b9b93047fe3cf45b = function(arg0, arg1) {
+        const ret = arg0[arg1 >>> 0];
+        return ret;
+    };
+    imports.wbg.__wbg_getwithrefkey_1dc361bd10053bfe = function(arg0, arg1) {
+        const ret = arg0[arg1];
+        return ret;
+    };
+    imports.wbg.__wbg_instanceof_ArrayBuffer_e14585432e3737fc = function(arg0) {
+        let result;
+        try {
+            result = arg0 instanceof ArrayBuffer;
+        } catch (_) {
+            result = false;
+        }
+        const ret = result;
+        return ret;
+    };
+    imports.wbg.__wbg_instanceof_Uint8Array_17156bcf118086a9 = function(arg0) {
+        let result;
+        try {
+            result = arg0 instanceof Uint8Array;
+        } catch (_) {
+            result = false;
+        }
+        const ret = result;
+        return ret;
+    };
+    imports.wbg.__wbg_isArray_a1eab7e0d067391b = function(arg0) {
+        const ret = Array.isArray(arg0);
+        return ret;
+    };
+    imports.wbg.__wbg_isSafeInteger_343e2beeeece1bb0 = function(arg0) {
+        const ret = Number.isSafeInteger(arg0);
+        return ret;
+    };
+    imports.wbg.__wbg_iterator_9a24c88df860dc65 = function() {
+        const ret = Symbol.iterator;
+        return ret;
+    };
+    imports.wbg.__wbg_length_a446193dc22c12f8 = function(arg0) {
+        const ret = arg0.length;
+        return ret;
+    };
+    imports.wbg.__wbg_length_e2d2a49132c1b256 = function(arg0) {
+        const ret = arg0.length;
+        return ret;
+    };
     imports.wbg.__wbg_msCrypto_a61aeb35a24c1329 = function(arg0) {
         const ret = arg0.msCrypto;
         return ret;
@@ -1350,6 +2235,10 @@ function __wbg_get_imports() {
     };
     imports.wbg.__wbg_new_5e0be73521bc8c17 = function() {
         const ret = new Map();
+        return ret;
+    };
+    imports.wbg.__wbg_new_78feb108b6472713 = function() {
+        const ret = new Array();
         return ret;
     };
     imports.wbg.__wbg_new_8a6f238a6ece86ea = function() {
@@ -1372,6 +2261,14 @@ function __wbg_get_imports() {
         const ret = new Uint8Array(arg0 >>> 0);
         return ret;
     };
+    imports.wbg.__wbg_next_25feadfc0913fea9 = function(arg0) {
+        const ret = arg0.next;
+        return ret;
+    };
+    imports.wbg.__wbg_next_6574e1a8a62d1055 = function() { return handleError(function (arg0) {
+        const ret = arg0.next();
+        return ret;
+    }, arguments) };
     imports.wbg.__wbg_node_905d3e251edff8a2 = function(arg0) {
         const ret = arg0.node;
         return ret;
@@ -1387,6 +2284,9 @@ function __wbg_get_imports() {
         const ret = module.require;
         return ret;
     }, arguments) };
+    imports.wbg.__wbg_set_37837023f3d740e8 = function(arg0, arg1, arg2) {
+        arg0[arg1 >>> 0] = arg2;
+    };
     imports.wbg.__wbg_set_3f1d0b984ed272ed = function(arg0, arg1, arg2) {
         arg0[arg1] = arg2;
     };
@@ -1424,8 +2324,21 @@ function __wbg_get_imports() {
         const ret = arg0.subarray(arg1 >>> 0, arg2 >>> 0);
         return ret;
     };
+    imports.wbg.__wbg_value_cd1ffa7b1ab794f1 = function(arg0) {
+        const ret = arg0.value;
+        return ret;
+    };
     imports.wbg.__wbg_versions_c01dfd4722a88165 = function(arg0) {
         const ret = arg0.versions;
+        return ret;
+    };
+    imports.wbg.__wbindgen_as_number = function(arg0) {
+        const ret = +arg0;
+        return ret;
+    };
+    imports.wbg.__wbindgen_boolean_get = function(arg0) {
+        const v = arg0;
+        const ret = typeof(v) === 'boolean' ? (v ? 1 : 0) : 2;
         return ret;
     };
     imports.wbg.__wbindgen_debug_string = function(arg0, arg1) {
@@ -1437,6 +2350,10 @@ function __wbg_get_imports() {
     };
     imports.wbg.__wbindgen_error_new = function(arg0, arg1) {
         const ret = new Error(getStringFromWasm0(arg0, arg1));
+        return ret;
+    };
+    imports.wbg.__wbindgen_in = function(arg0, arg1) {
+        const ret = arg0 in arg1;
         return ret;
     };
     imports.wbg.__wbindgen_init_externref_table = function() {
@@ -1466,13 +2383,31 @@ function __wbg_get_imports() {
         const ret = arg0 === undefined;
         return ret;
     };
+    imports.wbg.__wbindgen_jsval_loose_eq = function(arg0, arg1) {
+        const ret = arg0 == arg1;
+        return ret;
+    };
     imports.wbg.__wbindgen_memory = function() {
         const ret = wasm.memory;
         return ret;
     };
+    imports.wbg.__wbindgen_number_get = function(arg0, arg1) {
+        const obj = arg1;
+        const ret = typeof(obj) === 'number' ? obj : undefined;
+        getDataViewMemory0().setFloat64(arg0 + 8 * 1, isLikeNone(ret) ? 0 : ret, true);
+        getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
+    };
     imports.wbg.__wbindgen_number_new = function(arg0) {
         const ret = arg0;
         return ret;
+    };
+    imports.wbg.__wbindgen_string_get = function(arg0, arg1) {
+        const obj = arg1;
+        const ret = typeof(obj) === 'string' ? obj : undefined;
+        var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len1 = WASM_VECTOR_LEN;
+        getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+        getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
     };
     imports.wbg.__wbindgen_string_new = function(arg0, arg1) {
         const ret = getStringFromWasm0(arg0, arg1);

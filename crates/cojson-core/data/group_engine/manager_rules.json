@@ -1,0 +1,160 @@
+{
+  "description": "manager cannot demote admins, promote to admin, or invite admins/managers, but can add a writer",
+  "covalues": [
+    {
+      "coId": "co_zauZHdN3sH7gCmmfKH6464ekPJJ",
+      "headerJson": "{\"createdAt\":\"2026-07-03T23:11:06.984Z\",\"meta\":null,\"ruleset\":{\"initialAdmin\":\"sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":\"zyZoEacXzFv6rPsig\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg_session_ze2ZGE8c6p81",
+          "signerId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120266984,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z2LwvVpni6ggvpxYEr_for_sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg\\\",\\\"value\\\":\\\"sealed_U95YwO4GiMn51MieXL2bV29aFvRqtrMICb5G5kYxKFCLi0BdmLnD7H4k0Wm7_19ohIcKIMneZonEfp5VPnWT9TawASzsvX_w1FA==\\\"}]\",\"madeAt\":1783120266985,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z2LwvVpni6ggvpxYEr\\\"}]\",\"madeAt\":1783120266985,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"groupSealer\\\",\\\"value\\\":\\\"key_z2LwvVpni6ggvpxYEr@sealer_z9LkfFL55RDFGTXfkBK5Wo5P8syaUkKpDqFDrVtQ3mRaJ\\\"}]\",\"madeAt\":1783120266985,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_zQWofMrhAAkVuaSeWXU3DpxTWU1\\\",\\\"value\\\":\\\"manager\\\"}]\",\"madeAt\":1783120266986,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z2LwvVpni6ggvpxYEr_for_co_zQWofMrhAAkVuaSeWXU3DpxTWU1\\\",\\\"value\\\":\\\"sealed_UtkbCpQpgWPEtr1KMUufhlzIGwPYxMMhFVEu23GWAmEZOp0SxJtOjLQw3EL4e8HjsBjKpF8QFvkA4YtVcFwWLeRQQp3ZgBCRP4Q==\\\"}]\",\"madeAt\":1783120266986,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_z7X5EuzNiz8gKfR4fVWeSF1ebfY\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120266986,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z2LwvVpni6ggvpxYEr_for_co_z7X5EuzNiz8gKfR4fVWeSF1ebfY\\\",\\\"value\\\":\\\"sealed_U_jyDloXus3qO8_ytf9uEZiBaPQm26WPI8wd0eRXhjWcvNOnmIObx5w0WpG2-iEas5GivPTwpENYazq4PYuCEBRhi1bCyvJDNww==\\\"}]\",\"madeAt\":1783120266986,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5WoNAYZxKEfdN7yTTP3Z2g7GWuLpoM9X4JzrfsjRr1Quxu3qS7B5U3YycBbj2AGZDBd5VXf3znUJ6Cg6K7NRLs9K"
+        },
+        {
+          "sessionId": "co_zQWofMrhAAkVuaSeWXU3DpxTWU1_session_zLf4X671bL8Y",
+          "signerId": "signer_z9vUWSHx2vStAq5qa9JAdAQDxDUh5NCUqUrvjXiUiHavD",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_z7X5EuzNiz8gKfR4fVWeSF1ebfY\\\",\\\"value\\\":\\\"writer\\\"}]\",\"madeAt\":1783120266987,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z9GrJ44zPD4s2rromKYt57aGXxT4npBHWeW16Udeo4CoQ/signer_zJ8QiHZRVeUryxFVo5zk26QGCiPx1cyZRiH6nqyirGEZQ\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120266987,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z2hozWu51b858Kr6HHanPPr8PYkTwAfmp9yQTcn7v4rSr/signer_zH1gQDmc6b9hkTHDzeruQbqUfm8yYLt5osWn473oEWqdj\\\",\\\"value\\\":\\\"adminInvite\\\"}]\",\"madeAt\":1783120266987,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z9SUtx3gTf6YtdPbyMXmTZkM7JhyoG1iToZ72EPKGs2Xs/signer_z5qLBLD2NyrZfez198YiEsyASFX1JgMWA9qtyyvVEB5bP\\\",\\\"value\\\":\\\"managerInvite\\\"}]\",\"madeAt\":1783120266987,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zAtAZpyuXzNAvygAnJQdhhVxYGY9usXhX8Tr8g5t7kUcB/signer_z5RLo2LadgonCjS7A2zXDeE5CwHK7WJYE9LYS8jjKMmX8\\\",\\\"value\\\":\\\"writer\\\"}]\",\"madeAt\":1783120266987,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5yzNTssi9p9LF2BsGtdDiVeNTwW45NstTChoNvyR6GirJZVP1bZuEHkwA4uT9pgHBXD8dfKgj7f9e9hiMTFJUS9e"
+        }
+      ]
+    },
+    {
+      "coId": "co_zQWofMrhAAkVuaSeWXU3DpxTWU1",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_zGbqnXTrhM1sZzz2CGnt8cfjV8yMFpdmdmns8S25MXqw7/signer_z9vUWSHx2vStAq5qa9JAdAQDxDUh5NCUqUrvjXiUiHavD\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zGbqnXTrhM1sZzz2CGnt8cfjV8yMFpdmdmns8S25MXqw7/signer_z9vUWSHx2vStAq5qa9JAdAQDxDUh5NCUqUrvjXiUiHavD_session_z3M5cLpDdgRf",
+          "signerId": "signer_z9vUWSHx2vStAq5qa9JAdAQDxDUh5NCUqUrvjXiUiHavD",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zGbqnXTrhM1sZzz2CGnt8cfjV8yMFpdmdmns8S25MXqw7/signer_z9vUWSHx2vStAq5qa9JAdAQDxDUh5NCUqUrvjXiUiHavD\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120266985,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z2dM49Ng6M898qoy9h_for_sealer_zGbqnXTrhM1sZzz2CGnt8cfjV8yMFpdmdmns8S25MXqw7/signer_z9vUWSHx2vStAq5qa9JAdAQDxDUh5NCUqUrvjXiUiHavD\\\",\\\"value\\\":\\\"sealed_Uy7Tezg-kQ3_ds6ARuLgKLwOBF3WOhW9T3LG6EZ8f0gJSKS1dJUy2pNclk7mfLJQICnGbqU9cV0SpRDSUKFh5Ypxlz-26PbJClw==\\\"}]\",\"madeAt\":1783120266985,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z2dM49Ng6M898qoy9h\\\"}]\",\"madeAt\":1783120266985,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5ji6auwoMZefdfYeMh4gRyXBW4JdJXxWAJxWHeudonCq5wzwuqiGqwiwuDNKcmXa7qEZnWrHPq6S4gGGYvFyMgLe"
+        }
+      ]
+    },
+    {
+      "coId": "co_z7X5EuzNiz8gKfR4fVWeSF1ebfY",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_z4t7RuydA2Wu4A3A9e811qU7UiM1X35UhJpWbDtj9pLNp/signer_ztMCUcBmCexvsjYTzFZpsWUZpf4DjHaZU2eKhSm5HSyh\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z4t7RuydA2Wu4A3A9e811qU7UiM1X35UhJpWbDtj9pLNp/signer_ztMCUcBmCexvsjYTzFZpsWUZpf4DjHaZU2eKhSm5HSyh_session_zdkbh1uKuAM6",
+          "signerId": "signer_ztMCUcBmCexvsjYTzFZpsWUZpf4DjHaZU2eKhSm5HSyh",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z4t7RuydA2Wu4A3A9e811qU7UiM1X35UhJpWbDtj9pLNp/signer_ztMCUcBmCexvsjYTzFZpsWUZpf4DjHaZU2eKhSm5HSyh\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120266985,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z48pBxgLmPys6dHxkP_for_sealer_z4t7RuydA2Wu4A3A9e811qU7UiM1X35UhJpWbDtj9pLNp/signer_ztMCUcBmCexvsjYTzFZpsWUZpf4DjHaZU2eKhSm5HSyh\\\",\\\"value\\\":\\\"sealed_UGeRmNpzUkPzwKRRatuebege7qV2GcCpk8HlGuPiSandjoMcgSPZ7_8Tx0zWZS1J36kXxsRhvPd8uVg0IDXvjjMfqE1q0UEJc\\\"}]\",\"madeAt\":1783120266986,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z48pBxgLmPys6dHxkP\\\"}]\",\"madeAt\":1783120266986,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5QkdzDcPNjodWiZ5BmLr7fMk7F776w7CJWAHz5829KffYt13shY7GUN6R43P2QNSUsKzFxpQ7vZqDnsLni1QTTKB"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_zauZHdN3sH7gCmmfKH6464ekPJJ": [
+      {
+        "sessionId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg_session_ze2ZGE8c6p81",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg_session_ze2ZGE8c6p81",
+        "txIndex": 1,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg_session_ze2ZGE8c6p81",
+        "txIndex": 2,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg_session_ze2ZGE8c6p81",
+        "txIndex": 3,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg_session_ze2ZGE8c6p81",
+        "txIndex": 4,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg_session_ze2ZGE8c6p81",
+        "txIndex": 5,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg_session_ze2ZGE8c6p81",
+        "txIndex": 6,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zCW8f3fXvosKtiqRtJCFDMczYi8fRzbcvLLxcmkEiqkd3/signer_zD8vQ9RqKqJhmf4WK6si7zFuVbShr1iNWSWaWaovKcnBg_session_ze2ZGE8c6p81",
+        "txIndex": 7,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "co_zQWofMrhAAkVuaSeWXU3DpxTWU1_session_zLf4X671bL8Y",
+        "txIndex": 0,
+        "valid": false,
+        "reason": "Managers can't demote admins."
+      },
+      {
+        "sessionId": "co_zQWofMrhAAkVuaSeWXU3DpxTWU1_session_zLf4X671bL8Y",
+        "txIndex": 1,
+        "valid": false,
+        "reason": "Managers can't promote to admin."
+      },
+      {
+        "sessionId": "co_zQWofMrhAAkVuaSeWXU3DpxTWU1_session_zLf4X671bL8Y",
+        "txIndex": 2,
+        "valid": false,
+        "reason": "Managers can't invite admins."
+      },
+      {
+        "sessionId": "co_zQWofMrhAAkVuaSeWXU3DpxTWU1_session_zLf4X671bL8Y",
+        "txIndex": 3,
+        "valid": false,
+        "reason": "Managers can't invite managers."
+      },
+      {
+        "sessionId": "co_zQWofMrhAAkVuaSeWXU3DpxTWU1_session_zLf4X671bL8Y",
+        "txIndex": 4,
+        "valid": true,
+        "reason": null
+      }
+    ]
+  },
+  "roleQueries": [
+    {
+      "groupId": "co_zauZHdN3sH7gCmmfKH6464ekPJJ",
+      "member": "sealer_zAtAZpyuXzNAvygAnJQdhhVxYGY9usXhX8Tr8g5t7kUcB/signer_z5RLo2LadgonCjS7A2zXDeE5CwHK7WJYE9LYS8jjKMmX8",
+      "atTime": null,
+      "expectedRole": "writer"
+    }
+  ]
+}

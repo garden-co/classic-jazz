@@ -170,8 +170,12 @@ describe("Branching Logic", () => {
       // Merge second change
       branch.core.mergeBranch();
 
-      // Verify two merge commits exist
-      expect(originalMap.core.mergeCommits.length).toBe(2);
+      // Verify two merge commits exist. `originalMap` is a plain (non-group)
+      // coMap, so its content is fed by the native materializer (R3 stage-2b),
+      // which never populates the TS-only `mergeCommits` field directly — use
+      // the self-healing `getMergeCommits()` accessor (which triggers the
+      // lazy TS-side meta parse) rather than the raw field.
+      expect(originalMap.core.getMergeCommits().length).toBe(2);
 
       // Verify both changes are now in original map
       expect(originalMap.get("key1")).toBe("branchValue1");

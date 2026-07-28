@@ -1,0 +1,80 @@
+{
+  "description": "a CoValue owned by an account: the account-id transactor is resolved to its agent; account self-role is admin",
+  "covalues": [
+    {
+      "coId": "co_z17w9mDSdEpcHTDbjv2h59zkHxZ",
+      "headerJson": "{\"createdAt\":\"2026-07-03T23:11:07.016Z\",\"meta\":null,\"ruleset\":{\"group\":\"co_zd1rPKRSAYHvb8WdzJG1dY5qDoY\",\"type\":\"ownedByGroup\"},\"type\":\"comap\",\"uniqueness\":\"z5P9u6ZxK8B8gEHJUA\"}",
+      "sessions": [
+        {
+          "sessionId": "co_zd1rPKRSAYHvb8WdzJG1dY5qDoY_session_zhW6KSNaNhf6",
+          "signerId": "co_zd1rPKRSAYHvb8WdzJG1dY5qDoY",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"foo\\\",\\\"value\\\":\\\"bar\\\"}]\",\"madeAt\":1783120267016,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5grQs86JmsLqHeFz4FCNtGHxS4f8q9ephNiBrAttPkn3HY5wEEDE8Dzb3i2D6aZ9AbrbfVCv3C9vFDyiosD6Xrcs"
+        }
+      ]
+    },
+    {
+      "coId": "co_zd1rPKRSAYHvb8WdzJG1dY5qDoY",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_z9SeR8nz6m7jPpNqZNkB4YTPy28eF4chja6Kaog7QSknn/signer_zD3H2oXhNuiMRqgmqe9JoCYy6afw2n6bDfnxDFMYo2LsH\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z9SeR8nz6m7jPpNqZNkB4YTPy28eF4chja6Kaog7QSknn/signer_zD3H2oXhNuiMRqgmqe9JoCYy6afw2n6bDfnxDFMYo2LsH_session_zhW6KSNaNhf6",
+          "signerId": "co_zd1rPKRSAYHvb8WdzJG1dY5qDoY",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z9SeR8nz6m7jPpNqZNkB4YTPy28eF4chja6Kaog7QSknn/signer_zD3H2oXhNuiMRqgmqe9JoCYy6afw2n6bDfnxDFMYo2LsH\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120267014,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z3dRSvW2NPqqKzUtZj_for_sealer_z9SeR8nz6m7jPpNqZNkB4YTPy28eF4chja6Kaog7QSknn/signer_zD3H2oXhNuiMRqgmqe9JoCYy6afw2n6bDfnxDFMYo2LsH\\\",\\\"value\\\":\\\"sealed_U7Fcy079pPEvesLX_99O6moWgxI-GajTSfNoNBmaycKzcMOhmBUunv9N7ooLyLFQFYy1G4u42DHgM25dzlIyhlEYPazLqnax22Q==\\\"}]\",\"madeAt\":1783120267014,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z3dRSvW2NPqqKzUtZj\\\"}]\",\"madeAt\":1783120267014,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"profile\\\",\\\"value\\\":\\\"co_zhJe6FZ9hrYEJeVLZLUJ1u3yCxF\\\"}]\",\"madeAt\":1783120267016,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_zs1CEAZJaAYjCnWbj2axXwge5JWeKR6PrZwneE8row4tkn7wGrT9xnUouJVBn3G1oc5pMbHDAoLFhM9JGcpChhHx"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_z17w9mDSdEpcHTDbjv2h59zkHxZ": [
+      {
+        "sessionId": "co_zd1rPKRSAYHvb8WdzJG1dY5qDoY_session_zhW6KSNaNhf6",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null
+      }
+    ],
+    "co_zd1rPKRSAYHvb8WdzJG1dY5qDoY": [
+      {
+        "sessionId": "sealer_z9SeR8nz6m7jPpNqZNkB4YTPy28eF4chja6Kaog7QSknn/signer_zD3H2oXhNuiMRqgmqe9JoCYy6afw2n6bDfnxDFMYo2LsH_session_zhW6KSNaNhf6",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z9SeR8nz6m7jPpNqZNkB4YTPy28eF4chja6Kaog7QSknn/signer_zD3H2oXhNuiMRqgmqe9JoCYy6afw2n6bDfnxDFMYo2LsH_session_zhW6KSNaNhf6",
+        "txIndex": 1,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z9SeR8nz6m7jPpNqZNkB4YTPy28eF4chja6Kaog7QSknn/signer_zD3H2oXhNuiMRqgmqe9JoCYy6afw2n6bDfnxDFMYo2LsH_session_zhW6KSNaNhf6",
+        "txIndex": 2,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z9SeR8nz6m7jPpNqZNkB4YTPy28eF4chja6Kaog7QSknn/signer_zD3H2oXhNuiMRqgmqe9JoCYy6afw2n6bDfnxDFMYo2LsH_session_zhW6KSNaNhf6",
+        "txIndex": 3,
+        "valid": true,
+        "reason": null
+      }
+    ]
+  },
+  "roleQueries": [
+    {
+      "groupId": "co_zd1rPKRSAYHvb8WdzJG1dY5qDoY",
+      "member": "co_zd1rPKRSAYHvb8WdzJG1dY5qDoY",
+      "atTime": null,
+      "expectedRole": "admin"
+    }
+  ]
+}

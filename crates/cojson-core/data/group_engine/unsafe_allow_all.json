@@ -1,0 +1,50 @@
+{
+  "description": "a covalue with the unsafeAllowAll ruleset: every transaction is marked valid, including garbage changes and arbitrary meta (permissions.ts:176-181).",
+  "covalues": [
+    {
+      "coId": "co_zYxn4mwgvZWi3pnR3f28fDqy8XX",
+      "headerJson": "{\"createdAt\":\"2026-07-04T03:10:38.407Z\",\"meta\":null,\"ruleset\":{\"type\":\"unsafeAllowAll\"},\"type\":\"comap\",\"uniqueness\":\"z3zhzbkS6fFrk1ES9A\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z9Es2YnQ4AcqJvQd6BFXtQkGTHwCvEJgsMaw79PxL6jM3/signer_zBureBvLCHVcXv1kJvrJTAT7kc9h8T3C6bkhDa5EAgmEn_session_zRADgRtBPMWL",
+          "signerId": "sealer_z9Es2YnQ4AcqJvQd6BFXtQkGTHwCvEJgsMaw79PxL6jM3/signer_zBureBvLCHVcXv1kJvrJTAT7kc9h8T3C6bkhDa5EAgmEn",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"ok\\\",\\\"value\\\":1}]\",\"madeAt\":1783134638407,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"nonsense\\\":true},\\\"not a change\\\",42]\",\"madeAt\":1783134638407,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[]\",\"madeAt\":1783134638407,\"meta\":\"{\\\"arbitrary\\\":\\\"meta\\\"}\",\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z38MF3vM5bUjwcuLzDQ5j12kWPyxqHivPogcMgWirLQhFxNcEUNffNCidLwUSGLJ9B7fC8rm1YsNgQbMpAWxauH2y"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_zYxn4mwgvZWi3pnR3f28fDqy8XX": [
+      {
+        "sessionId": "sealer_z9Es2YnQ4AcqJvQd6BFXtQkGTHwCvEJgsMaw79PxL6jM3/signer_zBureBvLCHVcXv1kJvrJTAT7kc9h8T3C6bkhDa5EAgmEn_session_zRADgRtBPMWL",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "sealer_z9Es2YnQ4AcqJvQd6BFXtQkGTHwCvEJgsMaw79PxL6jM3/signer_zBureBvLCHVcXv1kJvrJTAT7kc9h8T3C6bkhDa5EAgmEn_session_zRADgRtBPMWL",
+        "txIndex": 1,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "sealer_z9Es2YnQ4AcqJvQd6BFXtQkGTHwCvEJgsMaw79PxL6jM3/signer_zBureBvLCHVcXv1kJvrJTAT7kc9h8T3C6bkhDa5EAgmEn_session_zRADgRtBPMWL",
+        "txIndex": 2,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": "{\"arbitrary\":\"meta\"}"
+      }
+    ]
+  },
+  "roleQueries": []
+}

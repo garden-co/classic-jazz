@@ -1,0 +1,108 @@
+{
+  "description": "a private transaction on a group is rejected; on an account it takes the account/private branch (pinned)",
+  "covalues": [
+    {
+      "coId": "co_z2dhDRz85jdtEnof1tWHHZxxZw8",
+      "headerJson": "{\"createdAt\":\"2026-07-03T23:11:07.021Z\",\"meta\":null,\"ruleset\":{\"initialAdmin\":\"co_zEjVr6wFSTU3tmsiVKK9Nco94Sj\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":\"z387DN2nD2gepXmRcT\"}",
+      "sessions": [
+        {
+          "sessionId": "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj_session_z17bJJ4g4iST",
+          "signerId": "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_zEjVr6wFSTU3tmsiVKK9Nco94Sj\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120267021,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_zrVbjZywBMMdpWWMU_for_co_zEjVr6wFSTU3tmsiVKK9Nco94Sj\\\",\\\"value\\\":\\\"sealed_UN6OhmMKe_ZwoRt68ISCJH0WyAP2f-FBXb7H7zuuXOwBj4lsJExA-vJiMa5Ox4vutezo_EPjCNv2GWO7YFdZdwjabEjMKxqwjAw==\\\"}]\",\"madeAt\":1783120267021,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_zrVbjZywBMMdpWWMU\\\"}]\",\"madeAt\":1783120267021,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"groupSealer\\\",\\\"value\\\":\\\"key_zrVbjZywBMMdpWWMU@sealer_zHSjafBZGXCqSQGQ1bGjERcN5febeka1CtFACPnMaZWLa\\\"}]\",\"madeAt\":1783120267021,\"privacy\":\"trusting\"}",
+            "{\"encryptedChanges\":\"encrypted_UkDhx-CTL_NJFQ1faZAP69-FcPkuv_6SofePfCzmWR_dvSphawymsUFsCSTP2qkoq82Y3BM6UKG0V7n1D_H2Dq4d2dTV5xBFtnviTlLvO9rWguffEp6I89TbfL1zJ89n7WhPB1c6ewvh0FGyZIi5ZrGBl2BndMZJB9Ca8p6lzVzhdHsvb_pAhUCkAivj-uoO8jg==\",\"keyUsed\":\"key_zrVbjZywBMMdpWWMU\",\"madeAt\":1783120267022,\"privacy\":\"private\"}"
+          ],
+          "lastSignature": "signature_z4MSp3CEH2JcAFSSZe6zmGRQ6UbF91ALdR724ChmAU2MmST46PS7cpea55QCw4DhLBJjEHiu2D7hcTJ2mPwxtHMao"
+        }
+      ]
+    },
+    {
+      "coId": "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_z9xYwKbdsPWMdCy5tbHaj5oaTXTjjZj3AJFZ4m4CfKumY/signer_zC61GV4S8wtSQFNsQBMptfpN7xt2sDSpegp5pvEu9AX6h\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z9xYwKbdsPWMdCy5tbHaj5oaTXTjjZj3AJFZ4m4CfKumY/signer_zC61GV4S8wtSQFNsQBMptfpN7xt2sDSpegp5pvEu9AX6h_session_z17bJJ4g4iST",
+          "signerId": "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z9xYwKbdsPWMdCy5tbHaj5oaTXTjjZj3AJFZ4m4CfKumY/signer_zC61GV4S8wtSQFNsQBMptfpN7xt2sDSpegp5pvEu9AX6h\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120267020,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z2TFRFNZ8xFLT686Ar_for_sealer_z9xYwKbdsPWMdCy5tbHaj5oaTXTjjZj3AJFZ4m4CfKumY/signer_zC61GV4S8wtSQFNsQBMptfpN7xt2sDSpegp5pvEu9AX6h\\\",\\\"value\\\":\\\"sealed_UFCt78JNBICVRvLttipFgY8796sU2MbrB6KVp2v_7GV1HDFAms7AXkEfibJufpQMmAPz0SW_SHkEQRUC0jeN0qjVFWLjFsZ0kbw==\\\"}]\",\"madeAt\":1783120267020,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z2TFRFNZ8xFLT686Ar\\\"}]\",\"madeAt\":1783120267021,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"profile\\\",\\\"value\\\":\\\"co_zcturcTSDYbFD2px8hSfE3Lfd24\\\"}]\",\"madeAt\":1783120267021,\"privacy\":\"trusting\"}",
+            "{\"encryptedChanges\":\"encrypted_UeXUAV8IpkU3esn---D2Gxrii3kJJtkgIAbcJfM0vI2kPT4NhNtNfWl7e4y8PaC15ZVn5gKNlOWdi\",\"keyUsed\":\"key_z2TFRFNZ8xFLT686Ar\",\"madeAt\":1783120267022,\"privacy\":\"private\"}"
+          ],
+          "lastSignature": "signature_z2YjZdyUuqMLAYwTDXLzKEAfGYPAXhdFQS1raboVrsKaKejuBbZ4Z8VN3u5kphvBufjT92VaTfx84bvPXa1xfeKVe"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_z2dhDRz85jdtEnof1tWHHZxxZw8": [
+      {
+        "sessionId": "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj_session_z17bJJ4g4iST",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj_session_z17bJJ4g4iST",
+        "txIndex": 1,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj_session_z17bJJ4g4iST",
+        "txIndex": 2,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj_session_z17bJJ4g4iST",
+        "txIndex": 3,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj_session_z17bJJ4g4iST",
+        "txIndex": 4,
+        "valid": false,
+        "reason": "Can't make private transactions in groups"
+      }
+    ],
+    "co_zEjVr6wFSTU3tmsiVKK9Nco94Sj": [
+      {
+        "sessionId": "sealer_z9xYwKbdsPWMdCy5tbHaj5oaTXTjjZj3AJFZ4m4CfKumY/signer_zC61GV4S8wtSQFNsQBMptfpN7xt2sDSpegp5pvEu9AX6h_session_z17bJJ4g4iST",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z9xYwKbdsPWMdCy5tbHaj5oaTXTjjZj3AJFZ4m4CfKumY/signer_zC61GV4S8wtSQFNsQBMptfpN7xt2sDSpegp5pvEu9AX6h_session_z17bJJ4g4iST",
+        "txIndex": 1,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z9xYwKbdsPWMdCy5tbHaj5oaTXTjjZj3AJFZ4m4CfKumY/signer_zC61GV4S8wtSQFNsQBMptfpN7xt2sDSpegp5pvEu9AX6h_session_z17bJJ4g4iST",
+        "txIndex": 2,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z9xYwKbdsPWMdCy5tbHaj5oaTXTjjZj3AJFZ4m4CfKumY/signer_zC61GV4S8wtSQFNsQBMptfpN7xt2sDSpegp5pvEu9AX6h_session_z17bJJ4g4iST",
+        "txIndex": 3,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z9xYwKbdsPWMdCy5tbHaj5oaTXTjjZj3AJFZ4m4CfKumY/signer_zC61GV4S8wtSQFNsQBMptfpN7xt2sDSpegp5pvEu9AX6h_session_z17bJJ4g4iST",
+        "txIndex": 4,
+        "valid": true,
+        "reason": null
+      }
+    ]
+  },
+  "roleQueries": []
+}

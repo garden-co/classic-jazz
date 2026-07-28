@@ -12,7 +12,7 @@ import {
   KeySecret,
   Signature,
   SignerID,
-  SessionMapImpl,
+  NodeCoreImpl,
 } from "../crypto/crypto.js";
 import {
   isDeleteSessionID,
@@ -80,7 +80,7 @@ export class VerifiedState {
   readonly id: RawCoID;
   readonly crypto: CryptoProvider;
   readonly header: CoValueHeader;
-  private readonly impl: SessionMapImpl;
+  private readonly nodeCore: NodeCoreImpl;
   public lastAccessed: number | undefined;
   public branchSourceId?: RawCoID;
   public branchName?: string;
@@ -97,6 +97,7 @@ export class VerifiedState {
   constructor(
     id: RawCoID,
     crypto: CryptoProvider,
+    nodeCore: NodeCoreImpl,
     header: CoValueHeader,
     streamingKnownState?: KnownStateSessions,
     skipVerify?: boolean,
@@ -107,7 +108,8 @@ export class VerifiedState {
     this.branchSourceId = header.meta?.source as RawCoID | undefined;
     this.branchName = header.meta?.branch as string | undefined;
 
-    this.impl = crypto.createSessionMap(
+    this.nodeCore = nodeCore;
+    this.nodeCore.createCoValue(
       id,
       JSON.stringify(header),
       TRANSACTION_CONFIG.MAX_RECOMMENDED_TX_SIZE,
@@ -116,7 +118,10 @@ export class VerifiedState {
 
     // Set streaming known state if provided
     if (streamingKnownState) {
-      this.impl.setStreamingKnownState(JSON.stringify(streamingKnownState));
+      this.nodeCore.setStreamingKnownState(
+        id,
+        JSON.stringify(streamingKnownState),
+      );
     }
   }
 
@@ -142,7 +147,10 @@ export class VerifiedState {
     newSignature: Signature,
   ) {
     const cached = this.sessionLogCache.get(sessionID);
-    const currentTxCount = this.impl.getTransactionCount(sessionID);
+    const currentTxCount = this.nodeCore.getTransactionCount(
+      this.id,
+      sessionID,
+    );
 
     if (cached) {
       // Append to existing cache
@@ -180,13 +188,20 @@ export class VerifiedState {
     sessionID: SessionID,
     signatureAfter: { [txIdx: number]: Signature | undefined },
   ): void {
-    const lastCheckpoint = this.impl.getLastSignatureCheckpoint(sessionID);
+    const lastCheckpoint = this.nodeCore.getLastSignatureCheckpoint(
+      this.id,
+      sessionID,
+    );
     if (
       lastCheckpoint !== undefined &&
       lastCheckpoint !== null &&
       lastCheckpoint >= 0
     ) {
-      const sig = this.impl.getSignatureAfter(sessionID, lastCheckpoint);
+      const sig = this.nodeCore.getSignatureAfter(
+        this.id,
+        sessionID,
+        lastCheckpoint,
+      );
       if (sig) {
         signatureAfter[lastCheckpoint] = sig as Signature;
       }
@@ -201,14 +216,17 @@ export class VerifiedState {
     [txIdx: number]: Signature | undefined;
   } {
     const signatureAfter: { [txIdx: number]: Signature | undefined } = {};
-    const lastCheckpoint = this.impl.getLastSignatureCheckpoint(sessionID);
+    const lastCheckpoint = this.nodeCore.getLastSignatureCheckpoint(
+      this.id,
+      sessionID,
+    );
     if (
       lastCheckpoint !== undefined &&
       lastCheckpoint !== null &&
       lastCheckpoint >= 0
     ) {
       for (let i = 0; i <= lastCheckpoint; i++) {
-        const sig = this.impl.getSignatureAfter(sessionID, i);
+        const sig = this.nodeCore.getSignatureAfter(this.id, sessionID, i);
         if (sig) {
           signatureAfter[i] = sig as Signature;
         }
@@ -218,7 +236,10 @@ export class VerifiedState {
   }
 
   private getSessionLog(sessionID: SessionID): SessionLog {
-    const currentTxCount = this.impl.getTransactionCount(sessionID);
+    const currentTxCount = this.nodeCore.getTransactionCount(
+      this.id,
+      sessionID,
+    );
     const cachedTxCount = this.sessionLogCacheValid.get(sessionID);
 
     // Check if cache is valid
@@ -230,13 +251,13 @@ export class VerifiedState {
     // Fetch all transactions from Rust
     const transactions: Transaction[] =
       currentTxCount > 0
-        ? (this.impl.getSessionTransactions(sessionID, 0) ?? [])
+        ? (this.nodeCore.getSessionTransactions(this.id, sessionID, 0) ?? [])
         : [];
 
     // Build signatureAfter map
     const signatureAfter = this.buildSignatureAfterMap(sessionID);
 
-    const lastSignature = this.impl.getLastSignature(sessionID) as
+    const lastSignature = this.nodeCore.getLastSignature(this.id, sessionID) as
       | Signature
       | undefined;
 
@@ -257,7 +278,7 @@ export class VerifiedState {
 
   markAsDeleted() {
     this.isDeleted = true;
-    this.impl.markAsDeleted();
+    this.nodeCore.markAsDeleted(this.id);
     this.invalidateCache();
   }
 
@@ -275,7 +296,8 @@ export class VerifiedState {
     // Convert transactions to JSON array
     const txJson = JSON.stringify(newTransactions);
 
-    this.impl.addTransactions(
+    this.nodeCore.addTransactions(
+      this.id,
       sessionID,
       signerID,
       txJson,
@@ -284,6 +306,30 @@ export class VerifiedState {
     );
 
     // Update cache directly instead of invalidating
+    this.updateSessionLogCache(
+      sessionID,
+      signerID,
+      newTransactions,
+      newSignature,
+    );
+    this.invalidateKnownStateCache();
+  }
+
+  /**
+   * TS-side cache bookkeeping for transactions that were already written to the
+   * native log by a path that bypasses {@link tryAddTransactions} — the
+   * stage-2b `ingestAndMaterialize` single-crossing coMap ingest. Performs
+   * exactly the post-add work `tryAddTransactions` does (session-log cache
+   * append + known-state cache invalidation); MUST be called once per
+   * successfully-ingested chunk or `knownState()`/`newContentSince` serve stale
+   * data.
+   */
+  noteTransactionsAdded(
+    sessionID: SessionID,
+    signerID: SignerID | undefined,
+    newTransactions: Transaction[],
+    newSignature: Signature,
+  ) {
     this.updateSessionLogCache(
       sessionID,
       signerID,
@@ -310,7 +356,8 @@ export class VerifiedState {
     const metaJson = meta ? JSON.stringify(meta) : undefined;
     const signerSecret = signerAgent.currentSignerSecret();
 
-    const resultJson = this.impl.makeNewTrustingTransaction(
+    const resultJson = this.nodeCore.makeNewTrustingTransaction(
+      this.id,
       sessionID,
       signerSecret,
       changesJson,
@@ -359,7 +406,8 @@ export class VerifiedState {
     const metaJson = meta ? JSON.stringify(meta) : undefined;
     const signerSecret = signerAgent.currentSignerSecret();
 
-    const resultJson = this.impl.makeNewPrivateTransaction(
+    const resultJson = this.nodeCore.makeNewPrivateTransaction(
+      this.id,
       sessionID,
       signerSecret,
       changesJson,
@@ -395,12 +443,15 @@ export class VerifiedState {
     if (this.isDeleted) {
       return;
     }
-    this.impl.setStreamingKnownState(JSON.stringify(streamingKnownState));
+    this.nodeCore.setStreamingKnownState(
+      this.id,
+      JSON.stringify(streamingKnownState),
+    );
     this.cachedKnownStateWithStreaming = undefined;
   }
 
   getSession(sessionID: SessionID): SessionLog | undefined {
-    const txCount = this.impl.getTransactionCount(sessionID);
+    const txCount = this.nodeCore.getTransactionCount(this.id, sessionID);
     if (txCount === -1) {
       return undefined;
     }
@@ -408,7 +459,7 @@ export class VerifiedState {
   }
 
   getTransactionsCount(sessionID: SessionID): number | undefined {
-    const txCount = this.impl.getTransactionCount(sessionID);
+    const txCount = this.nodeCore.getTransactionCount(this.id, sessionID);
     if (txCount === -1) {
       return undefined;
     }
@@ -416,13 +467,13 @@ export class VerifiedState {
   }
 
   get sessionCount(): number {
-    return this.impl.getSessionIds().length;
+    return this.nodeCore.getSessionIds(this.id).length;
   }
 
   getSessions(): Map<SessionID, SessionLog> {
     // Build a Map from all sessions
     const map = new Map<SessionID, SessionLog>();
-    const sessionIds = this.impl.getSessionIds() as SessionID[];
+    const sessionIds = this.nodeCore.getSessionIds(this.id) as SessionID[];
     for (const sessionID of sessionIds) {
       map.set(sessionID, this.getSessionLog(sessionID));
     }
@@ -430,7 +481,7 @@ export class VerifiedState {
   }
 
   *sessionEntries(): IterableIterator<[SessionID, SessionLog]> {
-    const sessionIds = this.impl.getSessionIds() as SessionID[];
+    const sessionIds = this.nodeCore.getSessionIds(this.id) as SessionID[];
     for (const sessionID of sessionIds) {
       yield [sessionID, this.getSessionLog(sessionID)];
     }
@@ -590,14 +641,16 @@ export class VerifiedState {
 
   knownState(): CoValueKnownState {
     if (!this.cachedKnownState) {
-      this.cachedKnownState = this.impl.getKnownState() as CoValueKnownState;
+      this.cachedKnownState = this.nodeCore.getKnownState(
+        this.id,
+      ) as CoValueKnownState;
     }
     return this.cachedKnownState;
   }
 
   knownStateWithStreaming(): CoValueKnownState {
     if (!this.cachedKnownStateWithStreaming) {
-      const result = this.impl.getKnownStateWithStreaming();
+      const result = this.nodeCore.getKnownStateWithStreaming(this.id);
       if (!result || result === undefined) {
         this.cachedKnownStateWithStreaming = this.knownState();
       } else {
@@ -608,7 +661,7 @@ export class VerifiedState {
   }
 
   isStreaming(): boolean {
-    return this.impl.isStreaming();
+    return this.nodeCore.isStreaming(this.id);
   }
 
   decryptTransaction(
@@ -616,7 +669,8 @@ export class VerifiedState {
     txIndex: number,
     keySecret: KeySecret,
   ): JsonValue[] | undefined {
-    const decrypted = this.impl.decryptTransaction(
+    const decrypted = this.nodeCore.decryptTransaction(
+      this.id,
       sessionID,
       txIndex,
       keySecret,
@@ -636,7 +690,8 @@ export class VerifiedState {
     if (!sessionLog?.transactions[txIndex]?.meta) {
       return undefined;
     }
-    const decrypted = this.impl.decryptTransactionMeta(
+    const decrypted = this.nodeCore.decryptTransactionMeta(
+      this.id,
       sessionID,
       txIndex,
       keySecret,

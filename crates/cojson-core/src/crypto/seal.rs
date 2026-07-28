@@ -264,7 +264,7 @@ mod tests {
 
         // Test sealing for group (no sender key needed)
         let sealed = seal_for_group(message, &recipient_id, nonce_material).unwrap();
-        
+
         // Sealed message should be at least 32 bytes (ephemeral public key) + ciphertext
         assert!(sealed.len() > 32);
 

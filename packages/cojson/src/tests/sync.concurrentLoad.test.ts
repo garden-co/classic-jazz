@@ -9,7 +9,6 @@ import {
   blockMessageTypeOnOutgoingPeer,
   fillCoMapWithLargeData,
   loadCoValueOrFail,
-  importContentIntoNode,
   setupTestNode,
   SyncMessagesLog,
   TEST_NODE_CONFIG,
@@ -437,6 +436,14 @@ describe("concurrent load", () => {
     // Delete the Group from server so it won't be pushed with the Map content
     // skipVerify prevents the server from checking dependencies before sending
     server.node.syncManager.disableTransactionVerification();
+    // Capture the Group content before deleting it: internalDeleteCoValue now
+    // evicts the NodeCore registry entry, so group.core can no longer be read
+    // back afterwards. Re-inject this captured content below (step 6) to
+    // simulate the Group becoming available again.
+    const groupContent = group.core.newContentSince(undefined);
+    if (!groupContent) {
+      throw new Error("Expected group content before delete");
+    }
     server.node.internalDeleteCoValue(group.id);
 
     // Load the map from the client
@@ -455,7 +462,12 @@ describe("concurrent load", () => {
     // Wait for the Map content to be sent
     await waitFor(() => SyncMessagesLog.messages.length >= 2);
 
-    importContentIntoNode(group.core, server.node, 1);
+    // 6. Group content is moved back to server (simulating it becoming available)
+    const groupChunk = groupContent[0];
+    if (!groupChunk) {
+      throw new Error("Expected at least one group content chunk");
+    }
+    server.node.syncManager.handleNewContent(groupChunk, "import");
 
     const result = await promise;
     expect(result.get("key")).toBe("value");

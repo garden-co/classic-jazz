@@ -1,0 +1,83 @@
+{
+  "description": "a received PRIVATE transaction on an owned map validates with meta === undefined (validation precedes decryption — the pipeline-order contract). Even though the reader supplied branch-pointer meta, TS cannot see it at validation, so no trim occurs and the reader write is rejected. metaJson is null (meta unavailable at validation).",
+  "covalues": [
+    {
+      "coId": "co_zaNLWDF81o7S9DV94nkS9NPhLTE",
+      "headerJson": "{\"createdAt\":\"2026-07-04T03:10:38.406Z\",\"meta\":null,\"ruleset\":{\"group\":\"co_z95CafWcqPaQiGCj9YiF3QyGPrN\",\"type\":\"ownedByGroup\"},\"type\":\"comap\",\"uniqueness\":\"z4VJWmSCWpEGFAK3KX\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zGgBUe9eGHbpujvq8kqe2kAk55w3VfqTe8cNANwKwVhLw/signer_zCM1jxkbarUrnQJJpiM1AYZV6EVaYbQkmYDoKS5qGL4oK_session_z4pvwM1xeZb4",
+          "signerId": "sealer_zGgBUe9eGHbpujvq8kqe2kAk55w3VfqTe8cNANwKwVhLw/signer_zCM1jxkbarUrnQJJpiM1AYZV6EVaYbQkmYDoKS5qGL4oK",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"base\\\",\\\"value\\\":1}]\",\"madeAt\":1783134638406,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5yYjCUp6dBC7hjZRfZBveAxnhYNwADiott1TErRkRxXr6AWCqQo1swx9eUWJZMQLqBUK441Y1ZsYCRb33Emg18kd"
+        },
+        {
+          "sessionId": "co_zb63hTq7sRoA9bULJuhYkkD3Ytc_session_zFf61jGJyWoS",
+          "signerId": "signer_z3CQTziUPR1VUnPPRiiEjwbXuG4iWDMB7sKnzyXnoDxAL",
+          "transactions": [
+            "{\"encryptedChanges\":\"encrypted_UlGeOTVPrqMiTT929LWa0mdo_fiCIoBAXI-9lrzOx97kHLxvoyayp\",\"keyUsed\":\"key_z3GcpR5SWXkPQfBjsA\",\"madeAt\":1783134638406,\"meta\":\"encrypted_UtD7OUEKn8YLCEIv5ZCWridF4aWCJpB0GLrlroX6w-LAAA13wwvOXOd1OnUvelQuqB_4qF5Pja4KwEtVj0gFBAqSu-h_6uQ==\",\"privacy\":\"private\"}"
+          ],
+          "lastSignature": "signature_z2SoutNv6audja1kRJbNm7kPA7EpHnUfjHYbJ5vKJn7xLqsSy2r9mKq1bz95D71xfZwmmv5v8MvESLGUgD5svjHMd"
+        }
+      ]
+    },
+    {
+      "coId": "co_z95CafWcqPaQiGCj9YiF3QyGPrN",
+      "headerJson": "{\"createdAt\":\"2026-07-04T03:10:38.405Z\",\"meta\":null,\"ruleset\":{\"initialAdmin\":\"sealer_zGgBUe9eGHbpujvq8kqe2kAk55w3VfqTe8cNANwKwVhLw/signer_zCM1jxkbarUrnQJJpiM1AYZV6EVaYbQkmYDoKS5qGL4oK\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":\"z32hLwbx2y5RKK8dgB\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zGgBUe9eGHbpujvq8kqe2kAk55w3VfqTe8cNANwKwVhLw/signer_zCM1jxkbarUrnQJJpiM1AYZV6EVaYbQkmYDoKS5qGL4oK_session_z4pvwM1xeZb4",
+          "signerId": "sealer_zGgBUe9eGHbpujvq8kqe2kAk55w3VfqTe8cNANwKwVhLw/signer_zCM1jxkbarUrnQJJpiM1AYZV6EVaYbQkmYDoKS5qGL4oK",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zGgBUe9eGHbpujvq8kqe2kAk55w3VfqTe8cNANwKwVhLw/signer_zCM1jxkbarUrnQJJpiM1AYZV6EVaYbQkmYDoKS5qGL4oK\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638405,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z3GcpR5SWXkPQfBjsA_for_sealer_zGgBUe9eGHbpujvq8kqe2kAk55w3VfqTe8cNANwKwVhLw/signer_zCM1jxkbarUrnQJJpiM1AYZV6EVaYbQkmYDoKS5qGL4oK\\\",\\\"value\\\":\\\"sealed_UckRYmDbNbfhHSu-7LLVK6oFKGebTLjDYGZ1CeQAl0J63o6H2qj8jzMCYUyAXuHL1nhl-gsQ2xDbbg6XyCd3FZWZRDoPdIbBcZg==\\\"}]\",\"madeAt\":1783134638405,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z3GcpR5SWXkPQfBjsA\\\"}]\",\"madeAt\":1783134638405,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"groupSealer\\\",\\\"value\\\":\\\"key_z3GcpR5SWXkPQfBjsA@sealer_z7qTr4aXxRE64Th5KLNXtwU488Vjf5kwnNVaZP1CzYkS5\\\"}]\",\"madeAt\":1783134638405,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_zb63hTq7sRoA9bULJuhYkkD3Ytc\\\",\\\"value\\\":\\\"reader\\\"}]\",\"madeAt\":1783134638405,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z3GcpR5SWXkPQfBjsA_for_co_zb63hTq7sRoA9bULJuhYkkD3Ytc\\\",\\\"value\\\":\\\"sealed_UDD3go5ia0cnG4WNAGYDtlp5G62vRIqMxqUnnFXmihrZg7VweQWCS-tN2n-uiWVxdfOxuDbKIQtv0PqlFdbJ-0fwRqRh7OOWKpg==\\\"}]\",\"madeAt\":1783134638405,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z2Bhh4DzaedM4pyqNDDRyMEMYL7GGpMjuYTBHNVwWkkvfiF1N9mQff5d1rUGQ5C7qkPuPGt1GbK39cP6vQoE1ug6b"
+        }
+      ]
+    },
+    {
+      "coId": "co_zb63hTq7sRoA9bULJuhYkkD3Ytc",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_zAqukXAZnYUiNJwTaz3etxc1UJHJoDqLwtCZU42qvjHKq/signer_z3CQTziUPR1VUnPPRiiEjwbXuG4iWDMB7sKnzyXnoDxAL\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zAqukXAZnYUiNJwTaz3etxc1UJHJoDqLwtCZU42qvjHKq/signer_z3CQTziUPR1VUnPPRiiEjwbXuG4iWDMB7sKnzyXnoDxAL_session_ziVckW3vdBS8",
+          "signerId": "signer_z3CQTziUPR1VUnPPRiiEjwbXuG4iWDMB7sKnzyXnoDxAL",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zAqukXAZnYUiNJwTaz3etxc1UJHJoDqLwtCZU42qvjHKq/signer_z3CQTziUPR1VUnPPRiiEjwbXuG4iWDMB7sKnzyXnoDxAL\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638405,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z3QXPEdctVYzCY5UTp_for_sealer_zAqukXAZnYUiNJwTaz3etxc1UJHJoDqLwtCZU42qvjHKq/signer_z3CQTziUPR1VUnPPRiiEjwbXuG4iWDMB7sKnzyXnoDxAL\\\",\\\"value\\\":\\\"sealed_UkKsxPeH_fwdMmMVBugMf71lRgxZ9MFj9JQ-VjkHWC_B-O_W5IIGM1qbEMf3QTBWNYJIGX_YWRW3kRdh42P6Jbh2HMBpe-C6CTQ==\\\"}]\",\"madeAt\":1783134638405,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z3QXPEdctVYzCY5UTp\\\"}]\",\"madeAt\":1783134638405,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_zeSQeai2roZ4Cy5R2FxcEgswwaYFJTKQYqrJsEQrRaH8oyuTEtRbHhcqqFkDAFrT2kPEkwus7yqA6ZLaHmtppLF7"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_zaNLWDF81o7S9DV94nkS9NPhLTE": [
+      {
+        "sessionId": "sealer_zGgBUe9eGHbpujvq8kqe2kAk55w3VfqTe8cNANwKwVhLw/signer_zCM1jxkbarUrnQJJpiM1AYZV6EVaYbQkmYDoKS5qGL4oK_session_z4pvwM1xeZb4",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "co_zb63hTq7sRoA9bULJuhYkkD3Ytc_session_zFf61jGJyWoS",
+        "txIndex": 0,
+        "valid": false,
+        "reason": "Transactor has no write permissions",
+        "outcome": "invalid",
+        "metaJson": null
+      }
+    ]
+  },
+  "roleQueries": []
+}

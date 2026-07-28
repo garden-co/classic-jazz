@@ -821,6 +821,157 @@ export function x25519PublicKey(
 }
 
 /**
+ * Validation verdict for a single transaction, mirroring `Verdict` on the
+ * Rust side.
+ */
+export type GroupVerdict = {
+  sessionId: string;
+  txIndex: /*u32*/ number;
+  valid: boolean;
+  /**
+   * One of "valid" / "invalid" / "validBranchPointerOnly", mirroring
+   * `VerdictOutcome` on the Rust side.
+   */
+  outcome: string;
+  reason: string | undefined;
+};
+
+/**
+ * Generated factory for {@link GroupVerdict} record objects.
+ */
+export const GroupVerdict = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<GroupVerdict, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    /**
+     * Create a frozen instance of {@link GroupVerdict}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    create,
+
+    /**
+     * Create a frozen instance of {@link GroupVerdict}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    new: create,
+
+    /**
+     * Defaults specified in the {@link cojson_core_rn} crate.
+     */
+    defaults: () => Object.freeze(defaults()) as Partial<GroupVerdict>,
+  });
+})();
+
+const FfiConverterTypeGroupVerdict = (() => {
+  type TypeName = GroupVerdict;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        sessionId: FfiConverterString.read(from),
+        txIndex: FfiConverterUInt32.read(from),
+        valid: FfiConverterBool.read(from),
+        outcome: FfiConverterString.read(from),
+        reason: FfiConverterOptionalString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.sessionId, into);
+      FfiConverterUInt32.write(value.txIndex, into);
+      FfiConverterBool.write(value.valid, into);
+      FfiConverterString.write(value.outcome, into);
+      FfiConverterOptionalString.write(value.reason, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.sessionId) +
+        FfiConverterUInt32.allocationSize(value.txIndex) +
+        FfiConverterBool.allocationSize(value.valid) +
+        FfiConverterString.allocationSize(value.outcome) +
+        FfiConverterOptionalString.allocationSize(value.reason)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * The compact result of the R3 stage-1 single-call ingest, mirroring
+ * `IngestOutcome` on the Rust side: `{generation, count, viewVersion,
+ * deltaJson}`, with no per-transaction verdict array (validation happens
+ * in-crate). `generation`/`viewVersion` are `f64` for lossless JS-number
+ * round-tripping of the u64 counters.
+ */
+export type IngestOutcome = {
+  generation: /*f64*/ number;
+  count: /*u32*/ number;
+  viewVersion: /*f64*/ number;
+  deltaJson: string;
+};
+
+/**
+ * Generated factory for {@link IngestOutcome} record objects.
+ */
+export const IngestOutcome = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<IngestOutcome, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    /**
+     * Create a frozen instance of {@link IngestOutcome}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    create,
+
+    /**
+     * Create a frozen instance of {@link IngestOutcome}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    new: create,
+
+    /**
+     * Defaults specified in the {@link cojson_core_rn} crate.
+     */
+    defaults: () => Object.freeze(defaults()) as Partial<IngestOutcome>,
+  });
+})();
+
+const FfiConverterTypeIngestOutcome = (() => {
+  type TypeName = IngestOutcome;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        generation: FfiConverterFloat64.read(from),
+        count: FfiConverterUInt32.read(from),
+        viewVersion: FfiConverterFloat64.read(from),
+        deltaJson: FfiConverterString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterFloat64.write(value.generation, into);
+      FfiConverterUInt32.write(value.count, into);
+      FfiConverterFloat64.write(value.viewVersion, into);
+      FfiConverterString.write(value.deltaJson, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterFloat64.allocationSize(value.generation) +
+        FfiConverterUInt32.allocationSize(value.count) +
+        FfiConverterFloat64.allocationSize(value.viewVersion) +
+        FfiConverterString.allocationSize(value.deltaJson)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
  * KnownState as a native Record (no JSON serialization needed)
  */
 export type KnownState = {
@@ -879,6 +1030,214 @@ const FfiConverterTypeKnownState = (() => {
         FfiConverterString.allocationSize(value.id) +
         FfiConverterBool.allocationSize(value.header) +
         FfiConverterMapStringUInt32.allocationSize(value.sessions)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * A pending (not-yet-persisted) transaction handed to `validate_transactions`,
+ * mirroring `PendingTxIn` on the Rust side.
+ */
+export type PendingTx = {
+  sessionId: string;
+  txIndex: /*u32*/ number;
+  sourceMadeAt: /*f64*/ number | undefined;
+  metaJson: string | undefined;
+  sourceTxId: SourceTxId | undefined;
+};
+
+/**
+ * Generated factory for {@link PendingTx} record objects.
+ */
+export const PendingTx = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<PendingTx, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    /**
+     * Create a frozen instance of {@link PendingTx}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    create,
+
+    /**
+     * Create a frozen instance of {@link PendingTx}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    new: create,
+
+    /**
+     * Defaults specified in the {@link cojson_core_rn} crate.
+     */
+    defaults: () => Object.freeze(defaults()) as Partial<PendingTx>,
+  });
+})();
+
+const FfiConverterTypePendingTx = (() => {
+  type TypeName = PendingTx;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        sessionId: FfiConverterString.read(from),
+        txIndex: FfiConverterUInt32.read(from),
+        sourceMadeAt: FfiConverterOptionalFloat64.read(from),
+        metaJson: FfiConverterOptionalString.read(from),
+        sourceTxId: FfiConverterOptionalTypeSourceTxId.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.sessionId, into);
+      FfiConverterUInt32.write(value.txIndex, into);
+      FfiConverterOptionalFloat64.write(value.sourceMadeAt, into);
+      FfiConverterOptionalString.write(value.metaJson, into);
+      FfiConverterOptionalTypeSourceTxId.write(value.sourceTxId, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.sessionId) +
+        FfiConverterUInt32.allocationSize(value.txIndex) +
+        FfiConverterOptionalFloat64.allocationSize(value.sourceMadeAt) +
+        FfiConverterOptionalString.allocationSize(value.metaJson) +
+        FfiConverterOptionalTypeSourceTxId.allocationSize(value.sourceTxId)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * A merged transaction's source identity, mirroring the `(session_id,
+ * tx_index)` tuple carried by `PendingTxIn::source_tx_id` on the Rust side.
+ * Plain camelCase on the generated TS side (uniffi lower-cases record field
+ * names the same way napi objects do) — unlike the JSON wire format used
+ * elsewhere in this codebase (`TransactionID`'s `sessionID`), uniffi records
+ * bypass serde entirely, so there is no `#[serde(rename)]` to apply here.
+ * The TS adapter (added in a later task) is responsible for bridging its
+ * `sessionID`-cased public type to this `sessionId`-cased record.
+ */
+export type SourceTxId = {
+  sessionId: string;
+  txIndex: /*u32*/ number;
+};
+
+/**
+ * Generated factory for {@link SourceTxId} record objects.
+ */
+export const SourceTxId = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<SourceTxId, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    /**
+     * Create a frozen instance of {@link SourceTxId}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    create,
+
+    /**
+     * Create a frozen instance of {@link SourceTxId}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    new: create,
+
+    /**
+     * Defaults specified in the {@link cojson_core_rn} crate.
+     */
+    defaults: () => Object.freeze(defaults()) as Partial<SourceTxId>,
+  });
+})();
+
+const FfiConverterTypeSourceTxId = (() => {
+  type TypeName = SourceTxId;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        sessionId: FfiConverterString.read(from),
+        txIndex: FfiConverterUInt32.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.sessionId, into);
+      FfiConverterUInt32.write(value.txIndex, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.sessionId) +
+        FfiConverterUInt32.allocationSize(value.txIndex)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * A DELTA of validation verdicts, mirroring `VerdictDelta` on the Rust side:
+ * the verdicts the caller has not yet seen, tagged with the engine `generation`
+ * and the `from_index` where they begin in the full list. `generation` is an
+ * `f64` for lossless JS-number round-tripping of the u64 counter.
+ */
+export type VerdictDelta = {
+  generation: /*f64*/ number;
+  fromIndex: /*u32*/ number;
+  verdicts: Array<GroupVerdict>;
+};
+
+/**
+ * Generated factory for {@link VerdictDelta} record objects.
+ */
+export const VerdictDelta = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<VerdictDelta, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    /**
+     * Create a frozen instance of {@link VerdictDelta}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    create,
+
+    /**
+     * Create a frozen instance of {@link VerdictDelta}, with defaults specified
+     * in Rust, in the {@link cojson_core_rn} crate.
+     */
+    new: create,
+
+    /**
+     * Defaults specified in the {@link cojson_core_rn} crate.
+     */
+    defaults: () => Object.freeze(defaults()) as Partial<VerdictDelta>,
+  });
+})();
+
+const FfiConverterTypeVerdictDelta = (() => {
+  type TypeName = VerdictDelta;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        generation: FfiConverterFloat64.read(from),
+        fromIndex: FfiConverterUInt32.read(from),
+        verdicts: FfiConverterArrayTypeGroupVerdict.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterFloat64.write(value.generation, into);
+      FfiConverterUInt32.write(value.fromIndex, into);
+      FfiConverterArrayTypeGroupVerdict.write(value.verdicts, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterFloat64.allocationSize(value.generation) +
+        FfiConverterUInt32.allocationSize(value.fromIndex) +
+        FfiConverterArrayTypeGroupVerdict.allocationSize(value.verdicts)
       );
     }
   }
@@ -1598,6 +1957,19 @@ export const SessionMapError = (() => {
     inner: Readonly<[string]>;
   };
 
+  /**
+   * Wraps any inner `cojson-core` error's `Display` output VERBATIM — no
+   * added prefix. This is load-bearing once `NodeCore` (node_core.rs)
+   * reuses this same variant for its registry-lookup errors: TS-side error
+   * translation does `message.startsWith("CoValue not loaded: ")`
+   * (packages/cojson/src/permissions.ts:322) and matches `"Unknown CoValue: "`
+   * similarly, so a wrapped format like the previous `"SessionMap error: {0}"`
+   * would silently break that match by shifting the prefix. Kept as a plain
+   * format string rather than `#[error(transparent)]`, since `String` doesn't
+   * implement `std::error::Error`; kept as one variant rather than adding a
+   * parallel one, since nothing in the tree depended on the old
+   * "SessionMap error: " prefix text.
+   */
   class Internal_ extends UniffiError implements Internal__interface {
     /**
      * @private
@@ -1891,6 +2263,1377 @@ const uniffiTypeBlake3HasherObjectFactory: UniffiObjectFactory<Blake3HasherInter
 // FfiConverter for Blake3HasherInterface
 const FfiConverterTypeBlake3Hasher = new FfiConverterObject(
   uniffiTypeBlake3HasherObjectFactory
+);
+
+export interface NodeCoreInterface {
+  /**
+   * Add transactions to a session
+   */
+  addTransactions(
+    coId: string,
+    sessionId: string,
+    signerId: string | undefined,
+    transactionsJson: string,
+    signature: string,
+    skipVerify: boolean
+  ) /*throws*/ : void;
+  coValueCount() /*throws*/ : /*u32*/ number;
+  /**
+   * Creates or replaces; replacing drops the previous session state.
+   * Mirrors TS semantics where constructing a new VerifiedState for an
+   * already-known id creates a fresh SessionMap.
+   */
+  createCoValue(
+    coId: string,
+    headerJson: string,
+    maxTxSize: /*u32*/ number | undefined,
+    skipVerify: boolean | undefined
+  ) /*throws*/ : void;
+  /**
+   * Decrypt transaction changes
+   */
+  decryptTransaction(
+    coId: string,
+    sessionId: string,
+    txIndex: /*u32*/ number,
+    keySecret: string
+  ) /*throws*/ : string | undefined;
+  /**
+   * Decrypt transaction meta
+   */
+  decryptTransactionMeta(
+    coId: string,
+    sessionId: string,
+    txIndex: /*u32*/ number,
+    keySecret: string
+  ) /*throws*/ : string | undefined;
+  /**
+   * Get the header as JSON
+   */
+  getHeader(coId: string) /*throws*/ : string;
+  /**
+   * Get the known state as a native Record
+   */
+  getKnownState(coId: string) /*throws*/ : KnownState;
+  /**
+   * Get the known state with streaming as a native Record
+   */
+  getKnownStateWithStreaming(coId: string) /*throws*/ : KnownState | undefined;
+  /**
+   * Get last signature for a session (returns None if session not found)
+   */
+  getLastSignature(
+    coId: string,
+    sessionId: string
+  ) /*throws*/ : string | undefined;
+  /**
+   * Get the last signature checkpoint index (-1 if no checkpoints, None if session not found)
+   */
+  getLastSignatureCheckpoint(
+    coId: string,
+    sessionId: string
+  ) /*throws*/ : /*i32*/ number | undefined;
+  /**
+   * Get all session IDs as native array
+   */
+  getSessionIds(coId: string) /*throws*/ : Array<string>;
+  /**
+   * Get transactions for a session from index as JSON strings (returns None if session not found)
+   */
+  getSessionTransactions(
+    coId: string,
+    sessionId: string,
+    fromIndex: /*u32*/ number
+  ) /*throws*/ : Array<string> | undefined;
+  /**
+   * Get signature after specific transaction index
+   */
+  getSignatureAfter(
+    coId: string,
+    sessionId: string,
+    txIndex: /*u32*/ number
+  ) /*throws*/ : string | undefined;
+  /**
+   * Get single transaction by index as JSON string (returns None if not found)
+   */
+  getTransaction(
+    coId: string,
+    sessionId: string,
+    txIndex: /*u32*/ number
+  ) /*throws*/ : string | undefined;
+  /**
+   * Get transaction count for a session (returns -1 if session not found)
+   */
+  getTransactionCount(
+    coId: string,
+    sessionId: string
+  ) /*throws*/ : /*i32*/ number;
+  hasCoValue(coId: string) /*throws*/ : boolean;
+  /**
+   * Whether a secret for `key_id` has been provided.
+   */
+  hasKeySecret(keyId: string) /*throws*/ : boolean;
+  /**
+   * R3 stage-1 single-call ingest: add a content chunk's transactions, validate
+   * them in-crate, and materialize the coMap view in ONE crossing — returning
+   * only the compact `IngestOutcome` (no per-transaction verdict array). The raw
+   * session log is still written, so the TS sync/storage paths are unaffected.
+   * See `NodeCore::ingest_and_materialize`.
+   */
+  ingestAndMaterialize(
+    coId: string,
+    sessionId: string,
+    signerId: string | undefined,
+    transactionsJson: string,
+    signature: string,
+    skipVerify: boolean,
+    sinceVersion: /*f64*/ number,
+    pending: Array<PendingTx>
+  ) /*throws*/ : IngestOutcome;
+  /**
+   * Check if this CoValue is deleted
+   */
+  isDeleted(coId: string) /*throws*/ : boolean;
+  /**
+   * Check whether the CoValue still has pending streaming content.
+   */
+  isStreaming(coId: string) /*throws*/ : boolean;
+  /**
+   * Create new private transaction (for local writes)
+   * Returns JSON: { signature: string, transaction: Transaction }
+   */
+  makeNewPrivateTransaction(
+    coId: string,
+    sessionId: string,
+    signerSecret: string,
+    changesJson: string,
+    keyId: string,
+    keySecret: string,
+    metaJson: string | undefined,
+    madeAt: /*f64*/ number
+  ) /*throws*/ : string;
+  /**
+   * Create new trusting transaction (for local writes)
+   * Returns JSON: { signature: string, transaction: Transaction }
+   */
+  makeNewTrustingTransaction(
+    coId: string,
+    sessionId: string,
+    signerSecret: string,
+    changesJson: string,
+    metaJson: string | undefined,
+    madeAt: /*f64*/ number
+  ) /*throws*/ : string;
+  /**
+   * Boundary (c): `{version, changedKeys, deletedKeys}` since `since_version`.
+   */
+  mapDelta(coId: string, sinceVersion: /*f64*/ number) /*throws*/ : string;
+  /**
+   * Boundary (c-rich): `{version, reset, changedKeys}` since `since_version`,
+   * each `changedKeys[k]` the full `MapOp[]` op-list — the payload a TS
+   * `RawCoMap` rebuilds `ops`/`latest` from.
+   */
+  mapDeltaRich(coId: string, sinceVersion: /*f64*/ number) /*throws*/ : string;
+  /**
+   * Boundary (a): latest JSON value for `key`, or null.
+   */
+  mapGet(coId: string, key: string) /*throws*/ : string | undefined;
+  /**
+   * Boundary (a): JSON value for `key` at `at_time` (ms; omit for latest).
+   */
+  mapGetAt(
+    coId: string,
+    key: string,
+    atTime: /*f64*/ number | undefined
+  ) /*throws*/ : string | undefined;
+  /**
+   * Frontier read: latest frontier-visible value of `key` (null = absent).
+   * `frontier_json` is `{ sessionID: txCount }`.
+   */
+  mapGetAtFrontier(
+    coId: string,
+    key: string,
+    frontierJson: string
+  ) /*throws*/ : string | undefined;
+  /**
+   * Materialize (or incrementally refresh) `co_id`'s coMap view; returns its
+   * current monotonic version. Call after each ingest batch.
+   */
+  mapMaterialize(
+    coId: string,
+    pending: Array<PendingTx>
+  ) /*throws*/ : /*f64*/ number;
+  /**
+   * Boundary (b): whole materialized map as a JSON object string.
+   */
+  mapSnapshot(coId: string) /*throws*/ : string;
+  /**
+   * Frontier read: whole `{key: latestVisibleValue}` snapshot under
+   * `frontier_json` as a JSON object string.
+   */
+  mapSnapshotAtFrontier(coId: string, frontierJson: string) /*throws*/ : string;
+  /**
+   * Mark this CoValue as deleted
+   */
+  markAsDeleted(coId: string) /*throws*/ : void;
+  /**
+   * The `KeyID`s `co_id`'s materialized view still needs a secret for.
+   */
+  missingKeyIds(coId: string) /*throws*/ : Array<string>;
+  /**
+   * Feed a resolved `KeyID -> KeySecret` to the native key store (idempotent).
+   * Native private-tx materialization is the only consumer; secrets never
+   * leave Rust once provided.
+   */
+  provideKeySecret(keyId: string, keySecret: string) /*throws*/ : void;
+  removeCoValue(coId: string) /*throws*/ : boolean;
+  /**
+   * Drop the cached validation engine for `co_id`, forcing a full recompute
+   * on the next `validate_transactions` / `role_of`. An absent `co_id` is a
+   * no-op (not `UnknownCoValue`): callers invoke this on dependants that may
+   * never have been registered on this node, so erroring would be hostile.
+   */
+  resetValidation(coId: string) /*throws*/ : void;
+  /**
+   * Role of member in group at time (ms). Returns the role string or None.
+   * Throws "Unknown CoValue: <id>" if `group_id` itself is not registered,
+   * and "CoValue not loaded: <id>" if a parent group / owning account is
+   * missing.
+   */
+  roleOf(
+    groupId: string,
+    member: string,
+    atTime: /*f64*/ number | undefined
+  ) /*throws*/ : string | undefined;
+  /**
+   * Set streaming known state
+   */
+  setStreamingKnownState(coId: string, streamingJson: string) /*throws*/ : void;
+  /**
+   * Validate a group/account CoValue; verdicts for ALL its transactions in
+   * validation order.
+   * Throws "Unknown CoValue: <id>" if `co_id` itself is not registered, and
+   * "CoValue not loaded: <id>" if a dependency (parent group / owning
+   * account) is missing.
+   */
+  validateTransactions(
+    coId: string,
+    pending: Array<PendingTx>
+  ) /*throws*/ : Array<GroupVerdict>;
+  /**
+   * Delta counterpart of `validate_transactions`: given the caller's
+   * `(since_generation, since_count)` cursor, return only the verdicts it has
+   * not seen. On a generation match returns `verdicts[since_count..]` with
+   * `from_index = since_count`; on a mismatch returns the whole list with
+   * `from_index = 0`. Same error contract as `validate_transactions`.
+   */
+  validateTransactionsDelta(
+    coId: string,
+    sinceGeneration: /*f64*/ number,
+    sinceCount: /*u32*/ number,
+    pending: Array<PendingTx>
+  ) /*throws*/ : VerdictDelta;
+}
+
+export class NodeCore
+  extends UniffiAbstractObject
+  implements NodeCoreInterface
+{
+  readonly [uniffiTypeNameSymbol] = 'NodeCore';
+  readonly [destructorGuardSymbol]: UniffiRustArcPtr;
+  readonly [pointerLiteralSymbol]: UnsafeMutableRawPointer;
+  /**
+   * Create a new empty NodeCore registry (one LocalNode owns one instance).
+   */
+  constructor() {
+    super();
+    const pointer = uniffiCaller.rustCall(
+      /*caller:*/ (callStatus) => {
+        return nativeModule().ubrn_uniffi_cojson_core_rn_fn_constructor_nodecore_new(
+          callStatus
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift
+    );
+    this[pointerLiteralSymbol] = pointer;
+    this[destructorGuardSymbol] =
+      uniffiTypeNodeCoreObjectFactory.bless(pointer);
+  }
+
+  /**
+   * Add transactions to a session
+   */
+  public addTransactions(
+    coId: string,
+    sessionId: string,
+    signerId: string | undefined,
+    transactionsJson: string,
+    signature: string,
+    skipVerify: boolean
+  ): void /*throws*/ {
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+        FfiConverterTypeSessionMapError
+      ),
+      /*caller:*/ (callStatus) => {
+        nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_add_transactions(
+          uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+          FfiConverterString.lower(coId),
+          FfiConverterString.lower(sessionId),
+          FfiConverterOptionalString.lower(signerId),
+          FfiConverterString.lower(transactionsJson),
+          FfiConverterString.lower(signature),
+          FfiConverterBool.lower(skipVerify),
+          callStatus
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift
+    );
+  }
+
+  public coValueCount(): /*u32*/ number /*throws*/ {
+    return FfiConverterUInt32.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_co_value_count(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Creates or replaces; replacing drops the previous session state.
+   * Mirrors TS semantics where constructing a new VerifiedState for an
+   * already-known id creates a fresh SessionMap.
+   */
+  public createCoValue(
+    coId: string,
+    headerJson: string,
+    maxTxSize: /*u32*/ number | undefined,
+    skipVerify: boolean | undefined
+  ): void /*throws*/ {
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+        FfiConverterTypeSessionMapError
+      ),
+      /*caller:*/ (callStatus) => {
+        nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_create_co_value(
+          uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+          FfiConverterString.lower(coId),
+          FfiConverterString.lower(headerJson),
+          FfiConverterOptionalUInt32.lower(maxTxSize),
+          FfiConverterOptionalBool.lower(skipVerify),
+          callStatus
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift
+    );
+  }
+
+  /**
+   * Decrypt transaction changes
+   */
+  public decryptTransaction(
+    coId: string,
+    sessionId: string,
+    txIndex: /*u32*/ number,
+    keySecret: string
+  ): string | undefined /*throws*/ {
+    return FfiConverterOptionalString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_decrypt_transaction(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            FfiConverterUInt32.lower(txIndex),
+            FfiConverterString.lower(keySecret),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Decrypt transaction meta
+   */
+  public decryptTransactionMeta(
+    coId: string,
+    sessionId: string,
+    txIndex: /*u32*/ number,
+    keySecret: string
+  ): string | undefined /*throws*/ {
+    return FfiConverterOptionalString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_decrypt_transaction_meta(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            FfiConverterUInt32.lower(txIndex),
+            FfiConverterString.lower(keySecret),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get the header as JSON
+   */
+  public getHeader(coId: string): string /*throws*/ {
+    return FfiConverterString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_header(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get the known state as a native Record
+   */
+  public getKnownState(coId: string): KnownState /*throws*/ {
+    return FfiConverterTypeKnownState.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_known_state(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get the known state with streaming as a native Record
+   */
+  public getKnownStateWithStreaming(
+    coId: string
+  ): KnownState | undefined /*throws*/ {
+    return FfiConverterOptionalTypeKnownState.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_known_state_with_streaming(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get last signature for a session (returns None if session not found)
+   */
+  public getLastSignature(
+    coId: string,
+    sessionId: string
+  ): string | undefined /*throws*/ {
+    return FfiConverterOptionalString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_last_signature(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get the last signature checkpoint index (-1 if no checkpoints, None if session not found)
+   */
+  public getLastSignatureCheckpoint(
+    coId: string,
+    sessionId: string
+  ): /*i32*/ number | undefined /*throws*/ {
+    return FfiConverterOptionalInt32.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_last_signature_checkpoint(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get all session IDs as native array
+   */
+  public getSessionIds(coId: string): Array<string> /*throws*/ {
+    return FfiConverterArrayString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_session_ids(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get transactions for a session from index as JSON strings (returns None if session not found)
+   */
+  public getSessionTransactions(
+    coId: string,
+    sessionId: string,
+    fromIndex: /*u32*/ number
+  ): Array<string> | undefined /*throws*/ {
+    return FfiConverterOptionalArrayString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_session_transactions(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            FfiConverterUInt32.lower(fromIndex),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get signature after specific transaction index
+   */
+  public getSignatureAfter(
+    coId: string,
+    sessionId: string,
+    txIndex: /*u32*/ number
+  ): string | undefined /*throws*/ {
+    return FfiConverterOptionalString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_signature_after(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            FfiConverterUInt32.lower(txIndex),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get single transaction by index as JSON string (returns None if not found)
+   */
+  public getTransaction(
+    coId: string,
+    sessionId: string,
+    txIndex: /*u32*/ number
+  ): string | undefined /*throws*/ {
+    return FfiConverterOptionalString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_transaction(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            FfiConverterUInt32.lower(txIndex),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Get transaction count for a session (returns -1 if session not found)
+   */
+  public getTransactionCount(
+    coId: string,
+    sessionId: string
+  ): /*i32*/ number /*throws*/ {
+    return FfiConverterInt32.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_get_transaction_count(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  public hasCoValue(coId: string): boolean /*throws*/ {
+    return FfiConverterBool.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_has_co_value(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Whether a secret for `key_id` has been provided.
+   */
+  public hasKeySecret(keyId: string): boolean /*throws*/ {
+    return FfiConverterBool.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_has_key_secret(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(keyId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * R3 stage-1 single-call ingest: add a content chunk's transactions, validate
+   * them in-crate, and materialize the coMap view in ONE crossing — returning
+   * only the compact `IngestOutcome` (no per-transaction verdict array). The raw
+   * session log is still written, so the TS sync/storage paths are unaffected.
+   * See `NodeCore::ingest_and_materialize`.
+   */
+  public ingestAndMaterialize(
+    coId: string,
+    sessionId: string,
+    signerId: string | undefined,
+    transactionsJson: string,
+    signature: string,
+    skipVerify: boolean,
+    sinceVersion: /*f64*/ number,
+    pending: Array<PendingTx>
+  ): IngestOutcome /*throws*/ {
+    return FfiConverterTypeIngestOutcome.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_ingest_and_materialize(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            FfiConverterOptionalString.lower(signerId),
+            FfiConverterString.lower(transactionsJson),
+            FfiConverterString.lower(signature),
+            FfiConverterBool.lower(skipVerify),
+            FfiConverterFloat64.lower(sinceVersion),
+            FfiConverterArrayTypePendingTx.lower(pending),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Check if this CoValue is deleted
+   */
+  public isDeleted(coId: string): boolean /*throws*/ {
+    return FfiConverterBool.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_is_deleted(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Check whether the CoValue still has pending streaming content.
+   */
+  public isStreaming(coId: string): boolean /*throws*/ {
+    return FfiConverterBool.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_is_streaming(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Create new private transaction (for local writes)
+   * Returns JSON: { signature: string, transaction: Transaction }
+   */
+  public makeNewPrivateTransaction(
+    coId: string,
+    sessionId: string,
+    signerSecret: string,
+    changesJson: string,
+    keyId: string,
+    keySecret: string,
+    metaJson: string | undefined,
+    madeAt: /*f64*/ number
+  ): string /*throws*/ {
+    return FfiConverterString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_make_new_private_transaction(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            FfiConverterString.lower(signerSecret),
+            FfiConverterString.lower(changesJson),
+            FfiConverterString.lower(keyId),
+            FfiConverterString.lower(keySecret),
+            FfiConverterOptionalString.lower(metaJson),
+            FfiConverterFloat64.lower(madeAt),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Create new trusting transaction (for local writes)
+   * Returns JSON: { signature: string, transaction: Transaction }
+   */
+  public makeNewTrustingTransaction(
+    coId: string,
+    sessionId: string,
+    signerSecret: string,
+    changesJson: string,
+    metaJson: string | undefined,
+    madeAt: /*f64*/ number
+  ): string /*throws*/ {
+    return FfiConverterString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_make_new_trusting_transaction(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(sessionId),
+            FfiConverterString.lower(signerSecret),
+            FfiConverterString.lower(changesJson),
+            FfiConverterOptionalString.lower(metaJson),
+            FfiConverterFloat64.lower(madeAt),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Boundary (c): `{version, changedKeys, deletedKeys}` since `since_version`.
+   */
+  public mapDelta(
+    coId: string,
+    sinceVersion: /*f64*/ number
+  ): string /*throws*/ {
+    return FfiConverterString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_map_delta(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterFloat64.lower(sinceVersion),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Boundary (c-rich): `{version, reset, changedKeys}` since `since_version`,
+   * each `changedKeys[k]` the full `MapOp[]` op-list — the payload a TS
+   * `RawCoMap` rebuilds `ops`/`latest` from.
+   */
+  public mapDeltaRich(
+    coId: string,
+    sinceVersion: /*f64*/ number
+  ): string /*throws*/ {
+    return FfiConverterString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_map_delta_rich(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterFloat64.lower(sinceVersion),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Boundary (a): latest JSON value for `key`, or null.
+   */
+  public mapGet(coId: string, key: string): string | undefined /*throws*/ {
+    return FfiConverterOptionalString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_map_get(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(key),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Boundary (a): JSON value for `key` at `at_time` (ms; omit for latest).
+   */
+  public mapGetAt(
+    coId: string,
+    key: string,
+    atTime: /*f64*/ number | undefined
+  ): string | undefined /*throws*/ {
+    return FfiConverterOptionalString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_map_get_at(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(key),
+            FfiConverterOptionalFloat64.lower(atTime),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Frontier read: latest frontier-visible value of `key` (null = absent).
+   * `frontier_json` is `{ sessionID: txCount }`.
+   */
+  public mapGetAtFrontier(
+    coId: string,
+    key: string,
+    frontierJson: string
+  ): string | undefined /*throws*/ {
+    return FfiConverterOptionalString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_map_get_at_frontier(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(key),
+            FfiConverterString.lower(frontierJson),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Materialize (or incrementally refresh) `co_id`'s coMap view; returns its
+   * current monotonic version. Call after each ingest batch.
+   */
+  public mapMaterialize(
+    coId: string,
+    pending: Array<PendingTx>
+  ): /*f64*/ number /*throws*/ {
+    return FfiConverterFloat64.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_map_materialize(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterArrayTypePendingTx.lower(pending),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Boundary (b): whole materialized map as a JSON object string.
+   */
+  public mapSnapshot(coId: string): string /*throws*/ {
+    return FfiConverterString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_map_snapshot(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Frontier read: whole `{key: latestVisibleValue}` snapshot under
+   * `frontier_json` as a JSON object string.
+   */
+  public mapSnapshotAtFrontier(
+    coId: string,
+    frontierJson: string
+  ): string /*throws*/ {
+    return FfiConverterString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_map_snapshot_at_frontier(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterString.lower(frontierJson),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Mark this CoValue as deleted
+   */
+  public markAsDeleted(coId: string): void /*throws*/ {
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+        FfiConverterTypeSessionMapError
+      ),
+      /*caller:*/ (callStatus) => {
+        nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_mark_as_deleted(
+          uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+          FfiConverterString.lower(coId),
+          callStatus
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift
+    );
+  }
+
+  /**
+   * The `KeyID`s `co_id`'s materialized view still needs a secret for.
+   */
+  public missingKeyIds(coId: string): Array<string> /*throws*/ {
+    return FfiConverterArrayString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_missing_key_ids(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Feed a resolved `KeyID -> KeySecret` to the native key store (idempotent).
+   * Native private-tx materialization is the only consumer; secrets never
+   * leave Rust once provided.
+   */
+  public provideKeySecret(keyId: string, keySecret: string): void /*throws*/ {
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+        FfiConverterTypeSessionMapError
+      ),
+      /*caller:*/ (callStatus) => {
+        nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_provide_key_secret(
+          uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+          FfiConverterString.lower(keyId),
+          FfiConverterString.lower(keySecret),
+          callStatus
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift
+    );
+  }
+
+  public removeCoValue(coId: string): boolean /*throws*/ {
+    return FfiConverterBool.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_remove_co_value(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Drop the cached validation engine for `co_id`, forcing a full recompute
+   * on the next `validate_transactions` / `role_of`. An absent `co_id` is a
+   * no-op (not `UnknownCoValue`): callers invoke this on dependants that may
+   * never have been registered on this node, so erroring would be hostile.
+   */
+  public resetValidation(coId: string): void /*throws*/ {
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+        FfiConverterTypeSessionMapError
+      ),
+      /*caller:*/ (callStatus) => {
+        nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_reset_validation(
+          uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+          FfiConverterString.lower(coId),
+          callStatus
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift
+    );
+  }
+
+  /**
+   * Role of member in group at time (ms). Returns the role string or None.
+   * Throws "Unknown CoValue: <id>" if `group_id` itself is not registered,
+   * and "CoValue not loaded: <id>" if a parent group / owning account is
+   * missing.
+   */
+  public roleOf(
+    groupId: string,
+    member: string,
+    atTime: /*f64*/ number | undefined
+  ): string | undefined /*throws*/ {
+    return FfiConverterOptionalString.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_role_of(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(groupId),
+            FfiConverterString.lower(member),
+            FfiConverterOptionalFloat64.lower(atTime),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Set streaming known state
+   */
+  public setStreamingKnownState(
+    coId: string,
+    streamingJson: string
+  ): void /*throws*/ {
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+        FfiConverterTypeSessionMapError
+      ),
+      /*caller:*/ (callStatus) => {
+        nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_set_streaming_known_state(
+          uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+          FfiConverterString.lower(coId),
+          FfiConverterString.lower(streamingJson),
+          callStatus
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift
+    );
+  }
+
+  /**
+   * Validate a group/account CoValue; verdicts for ALL its transactions in
+   * validation order.
+   * Throws "Unknown CoValue: <id>" if `co_id` itself is not registered, and
+   * "CoValue not loaded: <id>" if a dependency (parent group / owning
+   * account) is missing.
+   */
+  public validateTransactions(
+    coId: string,
+    pending: Array<PendingTx>
+  ): Array<GroupVerdict> /*throws*/ {
+    return FfiConverterArrayTypeGroupVerdict.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_validate_transactions(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterArrayTypePendingTx.lower(pending),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Delta counterpart of `validate_transactions`: given the caller's
+   * `(since_generation, since_count)` cursor, return only the verdicts it has
+   * not seen. On a generation match returns `verdicts[since_count..]` with
+   * `from_index = since_count`; on a mismatch returns the whole list with
+   * `from_index = 0`. Same error contract as `validate_transactions`.
+   */
+  public validateTransactionsDelta(
+    coId: string,
+    sinceGeneration: /*f64*/ number,
+    sinceCount: /*u32*/ number,
+    pending: Array<PendingTx>
+  ): VerdictDelta /*throws*/ {
+    return FfiConverterTypeVerdictDelta.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeSessionMapError.lift.bind(
+          FfiConverterTypeSessionMapError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_cojson_core_rn_fn_method_nodecore_validate_transactions_delta(
+            uniffiTypeNodeCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(coId),
+            FfiConverterFloat64.lower(sinceGeneration),
+            FfiConverterUInt32.lower(sinceCount),
+            FfiConverterArrayTypePendingTx.lower(pending),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * {@inheritDoc uniffi-bindgen-react-native#UniffiAbstractObject.uniffiDestroy}
+   */
+  uniffiDestroy(): void {
+    const ptr = (this as any)[destructorGuardSymbol];
+    if (ptr !== undefined) {
+      const pointer = uniffiTypeNodeCoreObjectFactory.pointer(this);
+      uniffiTypeNodeCoreObjectFactory.freePointer(pointer);
+      uniffiTypeNodeCoreObjectFactory.unbless(ptr);
+      delete (this as any)[destructorGuardSymbol];
+    }
+  }
+
+  static instanceOf(obj: any): obj is NodeCore {
+    return uniffiTypeNodeCoreObjectFactory.isConcreteType(obj);
+  }
+}
+
+const uniffiTypeNodeCoreObjectFactory: UniffiObjectFactory<NodeCoreInterface> =
+  (() => {
+    return {
+      create(pointer: UnsafeMutableRawPointer): NodeCoreInterface {
+        const instance = Object.create(NodeCore.prototype);
+        instance[pointerLiteralSymbol] = pointer;
+        instance[destructorGuardSymbol] = this.bless(pointer);
+        instance[uniffiTypeNameSymbol] = 'NodeCore';
+        return instance;
+      },
+
+      bless(p: UnsafeMutableRawPointer): UniffiRustArcPtr {
+        return uniffiCaller.rustCall(
+          /*caller:*/ (status) =>
+            nativeModule().ubrn_uniffi_internal_fn_method_nodecore_ffi__bless_pointer(
+              p,
+              status
+            ),
+          /*liftString:*/ FfiConverterString.lift
+        );
+      },
+
+      unbless(ptr: UniffiRustArcPtr) {
+        ptr.markDestroyed();
+      },
+
+      pointer(obj: NodeCoreInterface): UnsafeMutableRawPointer {
+        if ((obj as any)[destructorGuardSymbol] === undefined) {
+          throw new UniffiInternalError.UnexpectedNullPointer();
+        }
+        return (obj as any)[pointerLiteralSymbol];
+      },
+
+      clonePointer(obj: NodeCoreInterface): UnsafeMutableRawPointer {
+        const pointer = this.pointer(obj);
+        return uniffiCaller.rustCall(
+          /*caller:*/ (callStatus) =>
+            nativeModule().ubrn_uniffi_cojson_core_rn_fn_clone_nodecore(
+              pointer,
+              callStatus
+            ),
+          /*liftString:*/ FfiConverterString.lift
+        );
+      },
+
+      freePointer(pointer: UnsafeMutableRawPointer): void {
+        uniffiCaller.rustCall(
+          /*caller:*/ (callStatus) =>
+            nativeModule().ubrn_uniffi_cojson_core_rn_fn_free_nodecore(
+              pointer,
+              callStatus
+            ),
+          /*liftString:*/ FfiConverterString.lift
+        );
+      },
+
+      isConcreteType(obj: any): obj is NodeCoreInterface {
+        return (
+          obj[destructorGuardSymbol] && obj[uniffiTypeNameSymbol] === 'NodeCore'
+        );
+      },
+    };
+  })();
+// FfiConverter for NodeCoreInterface
+const FfiConverterTypeNodeCore = new FfiConverterObject(
+  uniffiTypeNodeCoreObjectFactory
 );
 
 export interface SessionMapInterface {
@@ -2592,6 +4335,11 @@ const FfiConverterTypeSessionMap = new FfiConverterObject(
 // FfiConverter for boolean | undefined
 const FfiConverterOptionalBool = new FfiConverterOptional(FfiConverterBool);
 
+// FfiConverter for /*f64*/number | undefined
+const FfiConverterOptionalFloat64 = new FfiConverterOptional(
+  FfiConverterFloat64
+);
+
 // FfiConverter for /*i32*/number | undefined
 const FfiConverterOptionalInt32 = new FfiConverterOptional(FfiConverterInt32);
 
@@ -2600,11 +4348,26 @@ const FfiConverterOptionalTypeKnownState = new FfiConverterOptional(
   FfiConverterTypeKnownState
 );
 
+// FfiConverter for SourceTxId | undefined
+const FfiConverterOptionalTypeSourceTxId = new FfiConverterOptional(
+  FfiConverterTypeSourceTxId
+);
+
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
 // FfiConverter for /*u32*/number | undefined
 const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
+
+// FfiConverter for Array<GroupVerdict>
+const FfiConverterArrayTypeGroupVerdict = new FfiConverterArray(
+  FfiConverterTypeGroupVerdict
+);
+
+// FfiConverter for Array<PendingTx>
+const FfiConverterArrayTypePendingTx = new FfiConverterArray(
+  FfiConverterTypePendingTx
+);
 
 // FfiConverter for Array<string>
 const FfiConverterArrayString = new FfiConverterArray(FfiConverterString);
@@ -2903,6 +4666,318 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_add_transactions() !==
+    51668
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_add_transactions'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_co_value_count() !==
+    32815
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_co_value_count'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_create_co_value() !==
+    30755
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_create_co_value'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_decrypt_transaction() !==
+    65084
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_decrypt_transaction'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_decrypt_transaction_meta() !==
+    17956
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_decrypt_transaction_meta'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_header() !==
+    19909
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_header'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_known_state() !==
+    4274
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_known_state'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_known_state_with_streaming() !==
+    62621
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_known_state_with_streaming'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_last_signature() !==
+    37437
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_last_signature'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_last_signature_checkpoint() !==
+    33702
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_last_signature_checkpoint'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_session_ids() !==
+    25250
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_session_ids'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_session_transactions() !==
+    45827
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_session_transactions'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_signature_after() !==
+    28724
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_signature_after'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_transaction() !==
+    39147
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_transaction'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_get_transaction_count() !==
+    42928
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_get_transaction_count'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_has_co_value() !==
+    43079
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_has_co_value'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_has_key_secret() !==
+    8432
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_has_key_secret'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_ingest_and_materialize() !==
+    13677
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_ingest_and_materialize'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_is_deleted() !==
+    44155
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_is_deleted'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_is_streaming() !==
+    26456
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_is_streaming'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_make_new_private_transaction() !==
+    15320
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_make_new_private_transaction'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_make_new_trusting_transaction() !==
+    6184
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_make_new_trusting_transaction'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_map_delta() !==
+    20871
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_map_delta'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_map_delta_rich() !==
+    5815
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_map_delta_rich'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_map_get() !==
+    20227
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_map_get'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_map_get_at() !==
+    7328
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_map_get_at'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_map_get_at_frontier() !==
+    12611
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_map_get_at_frontier'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_map_materialize() !==
+    42279
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_map_materialize'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_map_snapshot() !==
+    5214
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_map_snapshot'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_map_snapshot_at_frontier() !==
+    46186
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_map_snapshot_at_frontier'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_mark_as_deleted() !==
+    27776
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_mark_as_deleted'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_missing_key_ids() !==
+    19598
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_missing_key_ids'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_provide_key_secret() !==
+    57965
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_provide_key_secret'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_remove_co_value() !==
+    50835
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_remove_co_value'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_reset_validation() !==
+    42426
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_reset_validation'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_role_of() !==
+    37661
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_role_of'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_set_streaming_known_state() !==
+    2898
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_set_streaming_known_state'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_validate_transactions() !==
+    60283
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_validate_transactions'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_nodecore_validate_transactions_delta() !==
+    23780
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_method_nodecore_validate_transactions_delta'
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_cojson_core_rn_checksum_method_sessionmap_add_transactions() !==
     19976
   ) {
@@ -3063,6 +5138,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_cojson_core_rn_checksum_constructor_nodecore_new() !==
+    38599
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_cojson_core_rn_checksum_constructor_nodecore_new'
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_cojson_core_rn_checksum_constructor_sessionmap_new() !==
     2008
   ) {
@@ -3078,8 +5161,14 @@ export default Object.freeze({
     FfiConverterTypeBlake3Error,
     FfiConverterTypeBlake3Hasher,
     FfiConverterTypeCryptoErrorUniffi,
+    FfiConverterTypeGroupVerdict,
+    FfiConverterTypeIngestOutcome,
     FfiConverterTypeKnownState,
+    FfiConverterTypeNodeCore,
+    FfiConverterTypePendingTx,
     FfiConverterTypeSessionMap,
     FfiConverterTypeSessionMapError,
+    FfiConverterTypeSourceTxId,
+    FfiConverterTypeVerdictDelta,
   },
 });

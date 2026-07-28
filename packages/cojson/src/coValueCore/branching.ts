@@ -260,13 +260,27 @@ export function mergeBranch(branch: CoValueCore): CoValueCore {
 
   const now = Date.now();
 
+  // The `t`-compression below (only sending `meta.t` when this tx's `madeAt`
+  // DIFFERS from the previous merged tx's) relies on a FALLBACK the reader
+  // applies when `meta.t` is absent: `parseMetaInformation` uses
+  // `previousTransaction.madeAt` (coValueCore.ts:1566-1567). That fallback is a
+  // TS-only mechanism — the native `derive_merge_source` (R2,
+  // `group_engine/tx_view.rs`) explicitly does NOT implement it (deferred to
+  // `pending`, which the native-gated coMap fast path never supplies — see
+  // `CoValueCore.materializeNativeCoMap`'s `EMPTY_NODE_CORE_PENDING`).
+  // Without `meta.t`, native falls back to the merge commit's OWN (real,
+  // un-backdated) `currentMadeAt`, which can sort a stale branch write AFTER
+  // a later main-line edit to the same key. So: for a native-gated target,
+  // never compress `t` away — always send it explicitly.
+  const targetIsNativeCoMap = target.isNativeCoMap();
+
   for (const tx of branchValidTransactions) {
     const mergeMeta: MergedTransactionMetadata = {
       mi: tx.txID.txIndex,
     };
 
     // We compress the original made at, to reduce the size of the meta information
-    if (tx.madeAt !== lastOriginalMadeAt) {
+    if (targetIsNativeCoMap || tx.madeAt !== lastOriginalMadeAt) {
       // Storing the diff with madeAt to consume less bytes in the meta information
       mergeMeta.t = now - tx.madeAt;
     }

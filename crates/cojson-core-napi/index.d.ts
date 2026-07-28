@@ -7,6 +7,146 @@ export declare class Blake3Hasher {
   clone(): Blake3Hasher
 }
 
+export declare class NodeCore {
+  /** Create a new empty NodeCore registry (one LocalNode owns one instance). */
+  constructor()
+  /**
+   * Creates or replaces; replacing drops the previous session state.
+   * Mirrors TS semantics where constructing a new VerifiedState for an
+   * already-known id creates a fresh SessionMap.
+   */
+  createCoValue(coId: string, headerJson: string, maxTxSize?: number | undefined | null, skipVerify?: boolean | undefined | null): void
+  hasCoValue(coId: string): boolean
+  removeCoValue(coId: string): boolean
+  coValueCount(): number
+  /** Get the header as JSON */
+  getHeader(coId: string): string
+  /** Add transactions to a session */
+  addTransactions(coId: string, sessionId: string, signerId: string | undefined | null, transactionsJson: string, signature: string, skipVerify: boolean): void
+  /**
+   * Create new private transaction (for local writes)
+   * Returns JSON: { signature: string, transaction: Transaction }
+   */
+  makeNewPrivateTransaction(coId: string, sessionId: string, signerSecret: string, changesJson: string, keyId: string, keySecret: string, metaJson: string | undefined | null, madeAt: number): string
+  /**
+   * Create new trusting transaction (for local writes)
+   * Returns JSON: { signature: string, transaction: Transaction }
+   */
+  makeNewTrustingTransaction(coId: string, sessionId: string, signerSecret: string, changesJson: string, metaJson: string | undefined | null, madeAt: number): string
+  /** Get all session IDs as native array */
+  getSessionIds(coId: string): Array<string>
+  /** Get transaction count for a session (returns -1 if session not found) */
+  getTransactionCount(coId: string, sessionId: string): number
+  /** Get single transaction by index as JSON string (returns undefined if not found) */
+  getTransaction(coId: string, sessionId: string, txIndex: number): string | null
+  /** Get transactions for a session from index as JSON strings (returns undefined if session not found) */
+  getSessionTransactions(coId: string, sessionId: string, fromIndex: number): Array<string> | null
+  /** Get last signature for a session (returns undefined if session not found) */
+  getLastSignature(coId: string, sessionId: string): string | null
+  /** Get signature after specific transaction index */
+  getSignatureAfter(coId: string, sessionId: string, txIndex: number): string | null
+  /** Get the last signature checkpoint index (-1 if no checkpoints, undefined if session not found) */
+  getLastSignatureCheckpoint(coId: string, sessionId: string): number | null
+  /** Get the known state as a native JavaScript object */
+  getKnownState(coId: string): KnownState
+  /** Get the known state with streaming as a native JavaScript object */
+  getKnownStateWithStreaming(coId: string): KnownState | null
+  /** Check whether the CoValue still has pending streaming content. */
+  isStreaming(coId: string): boolean
+  /** Set streaming known state */
+  setStreamingKnownState(coId: string, streamingJson: string): void
+  /** Mark this CoValue as deleted */
+  markAsDeleted(coId: string): void
+  /** Check if this CoValue is deleted */
+  isDeleted(coId: string): boolean
+  /** Decrypt transaction changes */
+  decryptTransaction(coId: string, sessionId: string, txIndex: number, keySecret: string): string | null
+  /** Decrypt transaction meta */
+  decryptTransactionMeta(coId: string, sessionId: string, txIndex: number, keySecret: string): string | null
+  /**
+   * Validate a group/account CoValue; verdicts for ALL its transactions in validation order.
+   * Throws "Unknown CoValue: <id>" if `co_id` itself is not registered, and
+   * "CoValue not loaded: <id>" if a dependency (parent group / owning account) is missing.
+   */
+  validateTransactions(coId: string, pending: Array<PendingTx>): Array<GroupVerdict>
+  /**
+   * Delta counterpart of `validate_transactions`: given the caller's
+   * `(since_generation, since_count)` cursor, return only the verdicts it has
+   * not seen. On a generation match returns `verdicts[since_count..]` with
+   * `from_index = since_count`; on a mismatch returns the whole list with
+   * `from_index = 0`. Same error contract as `validate_transactions`.
+   */
+  validateTransactionsDelta(coId: string, sinceGeneration: number, sinceCount: number, pending: Array<PendingTx>): VerdictDelta
+  /**
+   * Drop the cached validation engine for `co_id`, forcing a full recompute
+   * on the next `validate_transactions` / `role_of`. An absent `co_id` is a
+   * no-op (not `UnknownCoValue`): callers invoke this on dependants that may
+   * never have been registered on this node, so erroring would be hostile.
+   */
+  resetValidation(coId: string): void
+  /**
+   * Role of member in group at time (ms). Returns the role string or null.
+   * Throws "Unknown CoValue: <id>" if `group_id` itself is not registered, and
+   * "CoValue not loaded: <id>" if a parent group / owning account is missing.
+   */
+  roleOf(groupId: string, member: string, atTime?: number | undefined | null): string | null
+  /**
+   * Materialize (or incrementally refresh) `co_id`'s coMap view; returns the
+   * current monotonic version. Call after each ingest batch.
+   */
+  mapMaterialize(coId: string, pending: Array<PendingTx>): number
+  /** Boundary (a): latest JSON value for `key`, or null. */
+  mapGet(coId: string, key: string): string | null
+  /** Boundary (a): JSON value for `key` at `at_time` (ms; omit for latest). */
+  mapGetAt(coId: string, key: string, atTime?: number | undefined | null): string | null
+  /** Boundary (b): whole materialized map as a JSON object string. */
+  mapSnapshot(coId: string): string
+  /** Boundary (c): `{version, changedKeys, deletedKeys}` since `since_version`. */
+  mapDelta(coId: string, sinceVersion: number): string
+  /**
+   * Boundary (c-rich): `{version, reset, changedKeys}` since `since_version`,
+   * each `changedKeys[k]` the full `MapOp[]` op-list — the payload a TS
+   * `RawCoMap` rebuilds `ops`/`latest` from.
+   */
+  mapDeltaRich(coId: string, sinceVersion: number): string
+  /**
+   * Boundary (c-lazy): the full ordered `MapOp[]` for a SINGLE key as a JSON
+   * array string (`[]` if absent). The lazy per-key counterpart to
+   * `mapDeltaRich`: a TS `RawCoMap` pulls this ONLY when a rich accessor first
+   * touches the key, so ingest transfers only latest values (the cheap
+   * `mapDelta`), never the per-op history of un-inspected keys.
+   */
+  mapOpsForKey(coId: string, key: string): string
+  /**
+   * Frontier read: latest frontier-visible value of `key` (null = absent).
+   * `frontier_json` is `{ sessionID: txCount }`.
+   */
+  mapGetAtFrontier(coId: string, key: string, frontierJson: string): string | null
+  /**
+   * Frontier read: whole `{key: latestVisibleValue}` snapshot under
+   * `frontier_json` as a JSON object string.
+   */
+  mapSnapshotAtFrontier(coId: string, frontierJson: string): string
+  /**
+   * R3 stage-1 single-call ingest: add a content chunk's transactions, validate
+   * them in-crate, and materialize the coMap view in ONE crossing — returning
+   * only the compact `IngestOutcome` (no per-transaction verdict array). The raw
+   * session log is still written, so TS sync/storage (which read raw sessions)
+   * are unaffected. See `NodeCore::ingest_and_materialize`.
+   */
+  ingestAndMaterialize(coId: string, sessionId: string, signerId: string | undefined | null, transactionsJson: string, signature: string, skipVerify: boolean, sinceVersion: number, pending: Array<PendingTx>): IngestOutcome
+  /**
+   * Feed a resolved `KeyID -> KeySecret` to the native key store (idempotent).
+   * TS calls this once it has unsealed a private tx's read key; native
+   * materialization then decrypts that tx internally.
+   */
+  provideKeySecret(keyId: string, keySecret: string): void
+  /** Whether a secret for `key_id` has been provided. */
+  hasKeySecret(keyId: string): boolean
+  /** The `KeyID`s `co_id`'s materialized view still needs a secret for. */
+  missingKeyIds(coId: string): Array<string>
+}
+
 export declare class SessionMap {
   /**
    * Create a new SessionMap for a CoValue.
@@ -198,6 +338,41 @@ export declare function getSealerId(secret: Uint8Array): string
  */
 export declare function getSignerId(secret: Uint8Array): string
 
+/**
+ * Validation verdict for a single transaction, mirroring `Verdict` on the
+ * Rust side.
+ */
+export interface GroupVerdict {
+  sessionId: string
+  txIndex: number
+  valid: boolean
+  /**
+   * One of "valid" / "invalid" / "validBranchPointerOnly", mirroring
+   * `VerdictOutcome` on the Rust side.
+   */
+  outcome: string
+  reason?: string
+}
+
+/**
+ * The compact result of `ingestAndMaterialize` (R3 stage-1): the ONLY payload
+ * that crosses the boundary per content chunk. Carries no verdict array —
+ * validation happens in-crate. Mirrors `IngestOutcome` on the Rust side.
+ */
+export interface IngestOutcome {
+  /** The validation engine's full-recompute generation after this ingest. */
+  generation: number
+  /** Total verdict count after this ingest (the TS validation cursor's `count`). */
+  count: number
+  /** The coMap view's monotonic version after materialization (the delta cursor). */
+  viewVersion: number
+  /**
+   * `{version, changedKeys, deletedKeys}` since the caller's `sinceVersion`,
+   * as a JSON string.
+   */
+  deltaJson: string
+}
+
 /** KnownState as a native JavaScript object (no JSON serialization needed) */
 export interface KnownState {
   id: string
@@ -217,6 +392,18 @@ export declare function newEd25519SigningKey(): Uint8Array
  * This key can be reused for multiple Diffie-Hellman exchanges.
  */
 export declare function newX25519PrivateKey(): Uint8Array
+
+/**
+ * A pending (not-yet-persisted) transaction handed to `validate_transactions`,
+ * mirroring `PendingTxIn` on the Rust side.
+ */
+export interface PendingTx {
+  sessionId: string
+  txIndex: number
+  sourceMadeAt?: number
+  metaJson?: string
+  sourceTxId?: SourceTxId
+}
 
 /**
  * NAPI-exposed function for sealing a message using X25519 + XSalsa20-Poly1305.
@@ -255,6 +442,21 @@ export declare function shortHash(value: string): string
 export declare function sign(message: Uint8Array, secret: Uint8Array): string
 
 /**
+ * A merged transaction's source identity, mirroring the `(session_id,
+ * tx_index)` tuple carried by `PendingTxIn::source_tx_id` on the Rust side.
+ * napi lower-cases struct field names to plain camelCase (`sessionId`, not
+ * `sessionID`) — unlike the JSON wire format elsewhere in this codebase
+ * (`TransactionID`'s `sessionID`), napi objects bypass serde entirely, so
+ * there is no `#[serde(rename)]` to apply here. The TS adapter is
+ * responsible for bridging its `sessionID`-cased public type to this
+ * `sessionId`-cased napi object.
+ */
+export interface SourceTxId {
+  sessionId: string
+  txIndex: number
+}
+
+/**
  * NAPI-exposed function for unsealing a message using X25519 + XSalsa20-Poly1305.
  * Provides authenticated decryption with perfect forward secrecy.
  * - `sealed_message`: The sealed bytes to decrypt
@@ -274,6 +476,18 @@ export declare function unseal(sealedMessage: Uint8Array, recipientSecret: strin
  * Returns unsealed bytes or throws error if unsealing fails.
  */
 export declare function unsealForGroup(sealedMessage: Uint8Array, recipientSecret: string, nonceMaterial: Uint8Array): Uint8Array
+
+/**
+ * A DELTA of validation verdicts (mirrors `VerdictDelta` on the Rust side): the
+ * verdicts the caller has not yet seen, tagged with the engine `generation` and
+ * the `from_index` at which they begin in the full list. See
+ * `NodeCore::validate_transactions_delta`.
+ */
+export interface VerdictDelta {
+  generation: number
+  fromIndex: number
+  verdicts: Array<GroupVerdict>
+}
 
 /**
  * NAPI-exposed function to verify an Ed25519 signature.

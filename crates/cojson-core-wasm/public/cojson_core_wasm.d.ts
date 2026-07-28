@@ -2,6 +2,109 @@
 /* eslint-disable */
 export function init(): void;
 /**
+ * WASM-exposed function to verify an Ed25519 signature.
+ * - `verifying_key`: 32 bytes of verifying key material
+ * - `message`: Raw bytes that were signed
+ * - `signature`: 64 bytes of signature material
+ * Returns true if signature is valid, false otherwise, or throws JsError if verification fails.
+ */
+export function ed25519Verify(verifying_key: Uint8Array, message: Uint8Array, signature: Uint8Array): boolean;
+/**
+ * WASM-exposed function to sign a message with an Ed25519 signing key.
+ * - `signing_key`: 32 bytes of signing key material
+ * - `message`: Raw bytes to sign
+ * Returns 64 bytes of signature material or throws JsError if signing fails.
+ */
+export function ed25519SigningKeySign(signing_key: Uint8Array, message: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to validate and copy Ed25519 signing key bytes.
+ * - `bytes`: 32 bytes of signing key material to validate
+ * Returns the same 32 bytes if valid or throws JsError if invalid.
+ */
+export function ed25519SigningKeyFromBytes(bytes: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to sign a message using Ed25519.
+ * - `signing_key`: 32 bytes of signing key material
+ * - `message`: Raw bytes to sign
+ * Returns 64 bytes of signature material or throws JsError if signing fails.
+ */
+export function ed25519Sign(signing_key: Uint8Array, message: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to validate and copy Ed25519 signature bytes.
+ * - `bytes`: 64 bytes of signature material to validate
+ * Returns the same 64 bytes if valid or throws JsError if invalid.
+ */
+export function ed25519SignatureFromBytes(bytes: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to validate and copy Ed25519 verifying key bytes.
+ * - `bytes`: 32 bytes of verifying key material to validate
+ * Returns the same 32 bytes if valid or throws JsError if invalid.
+ */
+export function ed25519VerifyingKeyFromBytes(bytes: Uint8Array): Uint8Array;
+/**
+ * Generate a new Ed25519 signing key using secure random number generation.
+ * Returns 32 bytes of raw key material suitable for use with other Ed25519 functions.
+ */
+export function newEd25519SigningKey(): Uint8Array;
+/**
+ * WASM-exposed function to derive the public key from an Ed25519 signing key.
+ * - `signing_key`: 32 bytes of signing key material
+ * Returns 32 bytes of public key material or throws JsError if key is invalid.
+ */
+export function ed25519SigningKeyToPublic(signing_key: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to derive an Ed25519 verifying key from a signing key.
+ * - `signing_key`: 32 bytes of signing key material
+ * Returns 32 bytes of verifying key material or throws JsError if key is invalid.
+ */
+export function ed25519VerifyingKey(signing_key: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function for XSalsa20 decryption without authentication.
+ * - `key`: 32-byte key for decryption (must match encryption key)
+ * - `nonce_material`: Raw bytes used to generate a 24-byte nonce (must match encryption)
+ * - `ciphertext`: Encrypted bytes to decrypt
+ * Returns the decrypted bytes or throws a JsError if decryption fails.
+ * Note: This function does not provide authentication. Use decrypt_xsalsa20_poly1305 for authenticated decryption.
+ */
+export function decryptXsalsa20(key: Uint8Array, nonce_material: Uint8Array, ciphertext: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function for XSalsa20 encryption without authentication.
+ * - `key`: 32-byte key for encryption
+ * - `nonce_material`: Raw bytes used to generate a 24-byte nonce via BLAKE3
+ * - `plaintext`: Raw bytes to encrypt
+ * Returns the encrypted bytes or throws a JsError if encryption fails.
+ * Note: This function does not provide authentication. Use encrypt_xsalsa20_poly1305 for authenticated encryption.
+ */
+export function encryptXsalsa20(key: Uint8Array, nonce_material: Uint8Array, plaintext: Uint8Array): Uint8Array;
+/**
+ * Hash data once using BLAKE3.
+ * - `data`: Raw bytes to hash
+ * Returns 32 bytes of hash output.
+ * This is the simplest way to compute a BLAKE3 hash of a single piece of data.
+ */
+export function blake3HashOnce(data: Uint8Array): Uint8Array;
+/**
+ * Generate a 24-byte nonce from input material using BLAKE3.
+ * - `nonce_material`: Raw bytes to derive the nonce from
+ * Returns 24 bytes suitable for use as a nonce in cryptographic operations.
+ * This function is deterministic - the same input will produce the same nonce.
+ */
+export function generateNonce(nonce_material: Uint8Array): Uint8Array;
+/**
+ * Compute a short hash of a stable-stringified JSON value.
+ * The input should already be serialized using stableStringify on the JS side.
+ * Returns a string prefixed with "shortHash_z" followed by base58-encoded hash.
+ */
+export function shortHash(value: string): string;
+/**
+ * Hash data once using BLAKE3 with a context prefix.
+ * - `data`: Raw bytes to hash
+ * - `context`: Context bytes to prefix to the data
+ * Returns 32 bytes of hash output.
+ * This is useful for domain separation - the same data hashed with different contexts will produce different outputs.
+ */
+export function blake3HashOnceWithContext(data: Uint8Array, context: Uint8Array): Uint8Array;
+/**
  * WASM-exposed function for unsealing a message using X25519 + XSalsa20-Poly1305.
  * Provides authenticated decryption with perfect forward secrecy.
  * - `sealed_message`: The sealed bytes to decrypt
@@ -81,24 +184,6 @@ export function encrypt(value: Uint8Array, key_secret: string, nonce_material: U
  */
 export function decrypt(ciphertext: Uint8Array, key_secret: string, nonce_material: Uint8Array): Uint8Array;
 /**
- * WASM-exposed function for XSalsa20 decryption without authentication.
- * - `key`: 32-byte key for decryption (must match encryption key)
- * - `nonce_material`: Raw bytes used to generate a 24-byte nonce (must match encryption)
- * - `ciphertext`: Encrypted bytes to decrypt
- * Returns the decrypted bytes or throws a JsError if decryption fails.
- * Note: This function does not provide authentication. Use decrypt_xsalsa20_poly1305 for authenticated decryption.
- */
-export function decryptXsalsa20(key: Uint8Array, nonce_material: Uint8Array, ciphertext: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function for XSalsa20 encryption without authentication.
- * - `key`: 32-byte key for encryption
- * - `nonce_material`: Raw bytes used to generate a 24-byte nonce via BLAKE3
- * - `plaintext`: Raw bytes to encrypt
- * Returns the encrypted bytes or throws a JsError if encryption fails.
- * Note: This function does not provide authentication. Use encrypt_xsalsa20_poly1305 for authenticated encryption.
- */
-export function encryptXsalsa20(key: Uint8Array, nonce_material: Uint8Array, plaintext: Uint8Array): Uint8Array;
-/**
  * WASM-exposed function to sign a message using Ed25519.
  * - `message`: Raw bytes to sign
  * - `secret`: Raw Ed25519 signing key bytes
@@ -119,97 +204,197 @@ export function getSignerId(secret: Uint8Array): string;
  * Returns true if signature is valid, false otherwise, or throws JsError if verification fails.
  */
 export function verify(signature: Uint8Array, message: Uint8Array, id: Uint8Array): boolean;
-/**
- * Hash data once using BLAKE3.
- * - `data`: Raw bytes to hash
- * Returns 32 bytes of hash output.
- * This is the simplest way to compute a BLAKE3 hash of a single piece of data.
- */
-export function blake3HashOnce(data: Uint8Array): Uint8Array;
-/**
- * Generate a 24-byte nonce from input material using BLAKE3.
- * - `nonce_material`: Raw bytes to derive the nonce from
- * Returns 24 bytes suitable for use as a nonce in cryptographic operations.
- * This function is deterministic - the same input will produce the same nonce.
- */
-export function generateNonce(nonce_material: Uint8Array): Uint8Array;
-/**
- * Compute a short hash of a stable-stringified JSON value.
- * The input should already be serialized using stableStringify on the JS side.
- * Returns a string prefixed with "shortHash_z" followed by base58-encoded hash.
- */
-export function shortHash(value: string): string;
-/**
- * Hash data once using BLAKE3 with a context prefix.
- * - `data`: Raw bytes to hash
- * - `context`: Context bytes to prefix to the data
- * Returns 32 bytes of hash output.
- * This is useful for domain separation - the same data hashed with different contexts will produce different outputs.
- */
-export function blake3HashOnceWithContext(data: Uint8Array, context: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to verify an Ed25519 signature.
- * - `verifying_key`: 32 bytes of verifying key material
- * - `message`: Raw bytes that were signed
- * - `signature`: 64 bytes of signature material
- * Returns true if signature is valid, false otherwise, or throws JsError if verification fails.
- */
-export function ed25519Verify(verifying_key: Uint8Array, message: Uint8Array, signature: Uint8Array): boolean;
-/**
- * WASM-exposed function to sign a message with an Ed25519 signing key.
- * - `signing_key`: 32 bytes of signing key material
- * - `message`: Raw bytes to sign
- * Returns 64 bytes of signature material or throws JsError if signing fails.
- */
-export function ed25519SigningKeySign(signing_key: Uint8Array, message: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to validate and copy Ed25519 signing key bytes.
- * - `bytes`: 32 bytes of signing key material to validate
- * Returns the same 32 bytes if valid or throws JsError if invalid.
- */
-export function ed25519SigningKeyFromBytes(bytes: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to sign a message using Ed25519.
- * - `signing_key`: 32 bytes of signing key material
- * - `message`: Raw bytes to sign
- * Returns 64 bytes of signature material or throws JsError if signing fails.
- */
-export function ed25519Sign(signing_key: Uint8Array, message: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to validate and copy Ed25519 signature bytes.
- * - `bytes`: 64 bytes of signature material to validate
- * Returns the same 64 bytes if valid or throws JsError if invalid.
- */
-export function ed25519SignatureFromBytes(bytes: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to validate and copy Ed25519 verifying key bytes.
- * - `bytes`: 32 bytes of verifying key material to validate
- * Returns the same 32 bytes if valid or throws JsError if invalid.
- */
-export function ed25519VerifyingKeyFromBytes(bytes: Uint8Array): Uint8Array;
-/**
- * Generate a new Ed25519 signing key using secure random number generation.
- * Returns 32 bytes of raw key material suitable for use with other Ed25519 functions.
- */
-export function newEd25519SigningKey(): Uint8Array;
-/**
- * WASM-exposed function to derive the public key from an Ed25519 signing key.
- * - `signing_key`: 32 bytes of signing key material
- * Returns 32 bytes of public key material or throws JsError if key is invalid.
- */
-export function ed25519SigningKeyToPublic(signing_key: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to derive an Ed25519 verifying key from a signing key.
- * - `signing_key`: 32 bytes of signing key material
- * Returns 32 bytes of verifying key material or throws JsError if key is invalid.
- */
-export function ed25519VerifyingKey(signing_key: Uint8Array): Uint8Array;
 export class Blake3Hasher {
   free(): void;
   constructor();
   clone(): Blake3Hasher;
   update(data: Uint8Array): void;
   finalize(): Uint8Array;
+}
+export class NodeCore {
+  free(): void;
+  /**
+   * Get the header as JSON
+   */
+  getHeader(co_id: string): string;
+  /**
+   * Check if this CoValue is deleted
+   */
+  isDeleted(co_id: string): boolean;
+  /**
+   * Boundary (a): JSON value for `key` at `at_time` (ms; omit for latest).
+   */
+  mapGetAt(co_id: string, key: string, at_time?: number | null): string | undefined;
+  hasCoValue(co_id: string): boolean;
+  /**
+   * Check whether the CoValue still has pending streaming content.
+   */
+  isStreaming(co_id: string): boolean;
+  /**
+   * Boundary (b): whole materialized map as a JSON object string.
+   */
+  mapSnapshot(co_id: string): string;
+  coValueCount(): number;
+  /**
+   * Whether a secret for `key_id` has been provided.
+   */
+  hasKeySecret(key_id: string): boolean;
+  /**
+   * Boundary (c-rich): `{version, reset, changedKeys}` since `since_version`,
+   * each `changedKeys[k]` the full `MapOp[]` op-list — the payload a TS
+   * `RawCoMap` rebuilds `ops`/`latest` from.
+   */
+  mapDeltaRich(co_id: string, since_version: number): string;
+  /**
+   * Creates or replaces; replacing drops the previous session state.
+   * Mirrors TS semantics where constructing a new VerifiedState for an
+   * already-known id creates a fresh SessionMap.
+   */
+  createCoValue(co_id: string, header_json: string, max_tx_size?: number | null, skip_verify?: boolean | null): void;
+  /**
+   * Get the known state as a native JavaScript object
+   */
+  getKnownState(co_id: string): any;
+  /**
+   * Get all session IDs as native array
+   */
+  getSessionIds(co_id: string): string[];
+  /**
+   * Get single transaction by index as JSON string (returns undefined if not found)
+   */
+  getTransaction(co_id: string, session_id: string, tx_index: number): string | undefined;
+  /**
+   * Materialize (or incrementally refresh) `co_id`'s coMap view; returns the
+   * current monotonic version. `pending` is a `JsValue` array of
+   * `PendingTxWire` objects (same shape as `validateTransactions`).
+   */
+  mapMaterialize(co_id: string, pending: any): number;
+  /**
+   * Mark this CoValue as deleted
+   */
+  markAsDeleted(co_id: string): void;
+  /**
+   * The `KeyID`s `co_id`'s materialized view still needs a secret for.
+   */
+  missingKeyIds(co_id: string): string[];
+  removeCoValue(co_id: string): boolean;
+  /**
+   * Add transactions to a session
+   */
+  addTransactions(co_id: string, session_id: string, signer_id: string | null | undefined, transactions_json: string, signature: string, skip_verify: boolean): void;
+  /**
+   * Drop the cached validation engine for `co_id`, forcing a full recompute
+   * on the next `validateTransactions` / `roleOf`. An absent `co_id` is a
+   * no-op (not `UnknownCoValue`): callers invoke this on dependants that may
+   * never have been registered on this node, so erroring would be hostile.
+   */
+  resetValidation(co_id: string): void;
+  /**
+   * Get last signature for a session (returns undefined if session not found)
+   */
+  getLastSignature(co_id: string, session_id: string): string | undefined;
+  /**
+   * Feed a resolved `KeyID -> KeySecret` to the native key store (idempotent).
+   */
+  provideKeySecret(key_id: string, key_secret: string): void;
+  /**
+   * Decrypt transaction changes
+   */
+  decryptTransaction(co_id: string, session_id: string, tx_index: number, key_secret: string): string | undefined;
+  /**
+   * Get signature after specific transaction index
+   */
+  getSignatureAfter(co_id: string, session_id: string, tx_index: number): string | undefined;
+  /**
+   * Frontier read: latest frontier-visible value of `key` (undefined =
+   * absent). `frontier_json` is `{ sessionID: txCount }`.
+   */
+  mapGetAtFrontier(co_id: string, key: string, frontier_json: string): string | undefined;
+  /**
+   * Get transaction count for a session (returns -1 if session not found)
+   */
+  getTransactionCount(co_id: string, session_id: string): number;
+  /**
+   * Validate a group/account CoValue; verdicts for ALL its transactions in
+   * validation order. `pending` is a `JsValue` array of `PendingTxWire`
+   * objects (see that struct's doc comment for the exact wire shape).
+   * Throws "Unknown CoValue: <id>" if `co_id` itself is not registered, and
+   * "CoValue not loaded: <id>" if a dependency (parent group / owning
+   * account) is missing.
+   */
+  validateTransactions(co_id: string, pending: any): any;
+  /**
+   * R3 stage-1 single-call ingest: add a content chunk's transactions, validate
+   * them in-crate, and materialize the coMap view in ONE crossing — returning
+   * only the compact `IngestOutcomeWire` (`{generation, count, viewVersion,
+   * deltaJson}`), with no per-transaction verdict array. The raw session log is
+   * still written, so TS sync/storage are unaffected. See
+   * `NodeCore::ingest_and_materialize`.
+   */
+  ingestAndMaterialize(co_id: string, session_id: string, signer_id: string | null | undefined, transactions_json: string, signature: string, skip_verify: boolean, since_version: number, pending: any): any;
+  /**
+   * Decrypt transaction meta
+   */
+  decryptTransactionMeta(co_id: string, session_id: string, tx_index: number, key_secret: string): string | undefined;
+  /**
+   * Get transactions for a session from index as JSON strings (returns undefined if session not found)
+   */
+  getSessionTransactions(co_id: string, session_id: string, from_index: number): string[] | undefined;
+  /**
+   * Frontier read: whole `{key: latestVisibleValue}` snapshot under
+   * `frontier_json` as a JSON object string.
+   */
+  mapSnapshotAtFrontier(co_id: string, frontier_json: string): string;
+  /**
+   * Set streaming known state
+   */
+  setStreamingKnownState(co_id: string, streaming_json: string): void;
+  /**
+   * Delta counterpart of `validateTransactions`: given the caller's
+   * `(since_generation, since_count)` cursor, return only the verdicts it has
+   * not seen as a `VerdictDeltaWire` (`{generation, fromIndex, verdicts}`). On
+   * a generation match returns `verdicts[since_count..]`; on a mismatch returns
+   * the whole list with `fromIndex = 0`. Same error contract as
+   * `validateTransactions`.
+   */
+  validateTransactionsDelta(co_id: string, since_generation: number, since_count: number, pending: any): any;
+  /**
+   * Create new private transaction (for local writes)
+   * Returns JSON: { signature: string, transaction: Transaction }
+   */
+  makeNewPrivateTransaction(co_id: string, session_id: string, signer_secret: string, changes_json: string, key_id: string, key_secret: string, meta_json: string | null | undefined, made_at: number): string;
+  /**
+   * Get the last signature checkpoint index (-1 if no checkpoints, undefined if session not found)
+   */
+  getLastSignatureCheckpoint(co_id: string, session_id: string): number | undefined;
+  /**
+   * Create new trusting transaction (for local writes)
+   * Returns JSON: { signature: string, transaction: Transaction }
+   */
+  makeNewTrustingTransaction(co_id: string, session_id: string, signer_secret: string, changes_json: string, meta_json: string | null | undefined, made_at: number): string;
+  /**
+   * Get the known state with streaming as a native JavaScript object
+   */
+  getKnownStateWithStreaming(co_id: string): any;
+  /**
+   * Create a new empty NodeCore registry (one LocalNode owns one instance).
+   */
+  constructor();
+  /**
+   * Boundary (a): latest JSON value for `key`, or undefined.
+   */
+  mapGet(co_id: string, key: string): string | undefined;
+  /**
+   * Role of member in group at time (ms). Returns the role string or null.
+   * Throws "Unknown CoValue: <id>" if `group_id` itself is not registered,
+   * and "CoValue not loaded: <id>" if a parent group / owning account is
+   * missing.
+   */
+  roleOf(group_id: string, member: string, at_time?: number | null): string | undefined;
+  /**
+   * Boundary (c): `{version, changedKeys, deletedKeys}` since `since_version`.
+   */
+  mapDelta(co_id: string, since_version: number): string;
 }
 export class SessionMap {
   free(): void;
@@ -306,7 +491,48 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly __wbg_nodecore_free: (a: number, b: number) => void;
   readonly __wbg_sessionmap_free: (a: number, b: number) => void;
+  readonly nodecore_addTransactions: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number];
+  readonly nodecore_coValueCount: (a: number) => number;
+  readonly nodecore_createCoValue: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+  readonly nodecore_decryptTransaction: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
+  readonly nodecore_decryptTransactionMeta: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
+  readonly nodecore_getHeader: (a: number, b: number, c: number) => [number, number, number, number];
+  readonly nodecore_getKnownState: (a: number, b: number, c: number) => [number, number, number];
+  readonly nodecore_getKnownStateWithStreaming: (a: number, b: number, c: number) => [number, number, number];
+  readonly nodecore_getLastSignature: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+  readonly nodecore_getLastSignatureCheckpoint: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+  readonly nodecore_getSessionIds: (a: number, b: number, c: number) => [number, number, number, number];
+  readonly nodecore_getSessionTransactions: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly nodecore_getSignatureAfter: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly nodecore_getTransaction: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly nodecore_getTransactionCount: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+  readonly nodecore_hasCoValue: (a: number, b: number, c: number) => number;
+  readonly nodecore_hasKeySecret: (a: number, b: number, c: number) => number;
+  readonly nodecore_ingestAndMaterialize: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: any) => [number, number, number];
+  readonly nodecore_isDeleted: (a: number, b: number, c: number) => [number, number, number];
+  readonly nodecore_isStreaming: (a: number, b: number, c: number) => [number, number, number];
+  readonly nodecore_makeNewPrivateTransaction: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number) => [number, number, number, number];
+  readonly nodecore_makeNewTrustingTransaction: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number, number];
+  readonly nodecore_mapDelta: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+  readonly nodecore_mapDeltaRich: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+  readonly nodecore_mapGet: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+  readonly nodecore_mapGetAt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+  readonly nodecore_mapGetAtFrontier: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+  readonly nodecore_mapMaterialize: (a: number, b: number, c: number, d: any) => [number, number, number];
+  readonly nodecore_mapSnapshot: (a: number, b: number, c: number) => [number, number, number, number];
+  readonly nodecore_mapSnapshotAtFrontier: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+  readonly nodecore_markAsDeleted: (a: number, b: number, c: number) => [number, number];
+  readonly nodecore_missingKeyIds: (a: number, b: number, c: number) => [number, number];
+  readonly nodecore_new: () => number;
+  readonly nodecore_provideKeySecret: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly nodecore_removeCoValue: (a: number, b: number, c: number) => number;
+  readonly nodecore_resetValidation: (a: number, b: number, c: number) => void;
+  readonly nodecore_roleOf: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+  readonly nodecore_setStreamingKnownState: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+  readonly nodecore_validateTransactions: (a: number, b: number, c: number, d: any) => [number, number, number];
+  readonly nodecore_validateTransactionsDelta: (a: number, b: number, c: number, d: number, e: number, f: any) => [number, number, number];
   readonly sessionmap_addTransactions: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number];
   readonly sessionmap_decryptTransaction: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
   readonly sessionmap_decryptTransactionMeta: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
@@ -328,30 +554,6 @@ export interface InitOutput {
   readonly sessionmap_new: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
   readonly sessionmap_setStreamingKnownState: (a: number, b: number, c: number) => [number, number];
   readonly init: () => void;
-  readonly decrypt: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-  readonly decryptXsalsa20: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-  readonly encrypt: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-  readonly encryptXsalsa20: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-  readonly getSealerId: (a: number, b: number) => [number, number, number, number];
-  readonly newX25519PrivateKey: () => [number, number];
-  readonly seal: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
-  readonly sealForGroup: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-  readonly unseal: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
-  readonly unsealForGroup: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-  readonly x25519DiffieHellman: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly x25519PublicKey: (a: number, b: number) => [number, number, number, number];
-  readonly getSignerId: (a: number, b: number) => [number, number, number, number];
-  readonly sign: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly verify: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
-  readonly __wbg_blake3hasher_free: (a: number, b: number) => void;
-  readonly blake3HashOnce: (a: number, b: number) => [number, number];
-  readonly blake3HashOnceWithContext: (a: number, b: number, c: number, d: number) => [number, number];
-  readonly blake3hasher_clone: (a: number) => number;
-  readonly blake3hasher_finalize: (a: number) => [number, number];
-  readonly blake3hasher_new: () => number;
-  readonly blake3hasher_update: (a: number, b: number, c: number) => void;
-  readonly generateNonce: (a: number, b: number) => [number, number];
-  readonly shortHash: (a: number, b: number) => [number, number];
   readonly ed25519Sign: (a: number, b: number, c: number, d: number) => [number, number, number, number];
   readonly ed25519SignatureFromBytes: (a: number, b: number) => [number, number, number, number];
   readonly ed25519SigningKeyFromBytes: (a: number, b: number) => [number, number, number, number];
@@ -361,6 +563,30 @@ export interface InitOutput {
   readonly ed25519VerifyingKeyFromBytes: (a: number, b: number) => [number, number, number, number];
   readonly newEd25519SigningKey: () => [number, number];
   readonly ed25519SigningKeySign: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+  readonly decryptXsalsa20: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly encryptXsalsa20: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly __wbg_blake3hasher_free: (a: number, b: number) => void;
+  readonly blake3HashOnce: (a: number, b: number) => [number, number];
+  readonly blake3HashOnceWithContext: (a: number, b: number, c: number, d: number) => [number, number];
+  readonly blake3hasher_clone: (a: number) => number;
+  readonly blake3hasher_finalize: (a: number) => [number, number];
+  readonly blake3hasher_new: () => number;
+  readonly blake3hasher_update: (a: number, b: number, c: number) => void;
+  readonly generateNonce: (a: number, b: number) => [number, number];
+  readonly shortHash: (a: number, b: number) => [number, number];
+  readonly seal: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
+  readonly sealForGroup: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly unseal: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
+  readonly unsealForGroup: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly getSealerId: (a: number, b: number) => [number, number, number, number];
+  readonly newX25519PrivateKey: () => [number, number];
+  readonly x25519DiffieHellman: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+  readonly x25519PublicKey: (a: number, b: number) => [number, number, number, number];
+  readonly decrypt: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly encrypt: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly getSignerId: (a: number, b: number) => [number, number, number, number];
+  readonly sign: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+  readonly verify: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_exn_store: (a: number) => void;

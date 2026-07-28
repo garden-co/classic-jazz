@@ -451,6 +451,23 @@ export class RawGroup<
   roleOfInternal(
     accountID: RawAccountID | AgentID | typeof EVERYONE,
   ): Role | undefined {
+    // Delegate read-side role resolution to the native NodeCore. The native
+    // implementation covers the full read semantics (direct role, parent-group
+    // inheritance, everyone fallback, RawAccount self→admin) and only models an
+    // `atTime` view, so this TS body survives ONLY for branch/frontier views
+    // that the native side has no equivalent of (stage 2 keeps those on the TS
+    // path). Do NOT collapse the two view checks into `!this.isTimeTravelEntity()`:
+    // that would also block plain `atTime` views — which native DOES support
+    // (passed as the third arg below) — and it doesn't cover branchSourceId.
+    const nodeCore = this.core.node.nodeCore;
+    if (
+      this.core.verified.branchSourceId === undefined &&
+      this.atFrontierFilter === undefined
+    ) {
+      const role = nodeCore.roleOf(this.core.id, accountID, this.atTimeFilter);
+      return role as Role | undefined;
+    }
+
     let roleHere = this.get(accountID);
 
     if (roleHere === "revoked") {

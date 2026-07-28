@@ -32,7 +32,7 @@ import {
   secretSeedFromInviteSecret,
 } from "./coValues/group.js";
 import { CO_VALUE_LOADING_CONFIG } from "./config.js";
-import { AgentSecret, CryptoProvider } from "./crypto/crypto.js";
+import { AgentSecret, CryptoProvider, NodeCoreImpl } from "./crypto/crypto.js";
 import { AgentID, RawCoID, SessionID, isAgentID, isRawCoID } from "./ids.js";
 import { logger } from "./logger.js";
 import { StorageAPI } from "./storage/index.js";
@@ -63,6 +63,8 @@ const { localNode } = useJazz();
 export class LocalNode {
   /** @internal */
   crypto: CryptoProvider;
+  /** @internal */
+  readonly nodeCore: NodeCoreImpl;
   /** @internal */
   private readonly coValues = new Map<RawCoID, CoValueCore>();
 
@@ -96,6 +98,7 @@ export class LocalNode {
     this.agentSecret = agentSecret;
     this.currentSessionID = currentSessionID;
     this.crypto = crypto;
+    this.nodeCore = crypto.createNodeCore();
     if (enableFullStorageReconciliation) {
       this.syncManager.fullStorageReconciliationEnabled = true;
     }
@@ -198,6 +201,7 @@ export class LocalNode {
    */
   internalDeleteCoValue(id: RawCoID) {
     this.coValues.delete(id);
+    this.scheduleNodeCoreEviction(id);
     this.storage?.onCoValueUnmounted(id);
   }
 
@@ -242,11 +246,41 @@ export class LocalNode {
 
     // Single map update (replacing old with shell)
     this.coValues.set(id, shell);
+    this.scheduleNodeCoreEviction(id);
 
     // Notify storage
     this.storage?.onCoValueUnmounted(id);
 
     return true;
+  }
+
+  /**
+   * Drop the NodeCore registry entry for a CoValue that has just been deleted
+   * or unmounted.
+   *
+   * The removal is deferred to the next microtask so that any already-queued
+   * {@link LocalTransactionsSyncQueue} batch — which reads the registry to
+   * persist and sync local transactions — flushes first (microtasks run in
+   * FIFO order). This matters when a CoValue is garbage-collected (or
+   * force-deleted) before its last local transaction has been synced: the
+   * batch must still be able to read the entry. The guard skips removal when
+   * the CoValue has been (re)loaded in the meantime, so a freshly registered
+   * entry is never dropped.
+   *
+   * {@link gracefulShutdown} does NOT evict: a shutting-down node's registry is
+   * released wholesale when the node is dropped, and eagerly emptying it while
+   * sync messages are still in flight would make in-flight reads throw
+   * "Unknown CoValue".
+   *
+   * @internal
+   */
+  private scheduleNodeCoreEviction(id: RawCoID) {
+    queueMicrotask(() => {
+      const current = this.coValues.get(id);
+      if (!current || !current.isAvailable()) {
+        this.nodeCore.removeCoValue(id);
+      }
+    });
   }
 
   getCurrentAccountOrAgentID(): RawAccountID | AgentID {
@@ -999,6 +1033,13 @@ export class LocalNode {
   async gracefulShutdown(): Promise<unknown> {
     this.garbageCollector?.stop();
     await this.syncManager.gracefulShutdown();
+    // NOTE: NodeCore registry entries are intentionally NOT dropped here.
+    // Emptying the shared registry while sync messages are still in flight
+    // (e.g. a LOAD queued before shutdown, or one that arrives before the peer
+    // is fully torn down) makes a still-available CoValueCore's session reads
+    // throw "Unknown CoValue". The whole registry — and every SessionMap it
+    // owns (native included) — is released when this node is dropped, so
+    // eager removal is unnecessary for reclamation.
     return this.storage?.close();
   }
 }

@@ -107,7 +107,13 @@ describe("init transaction meta", () => {
 
     expect(map.get("version")).toBe("later");
 
-    const rebuildSpy = vi.spyOn(map, "rebuildFromCore");
+    // `map` is a plain (non-group) coMap, so its content is fed by the native
+    // materializer (R3 stage-2b): a synced fww flip is applied via a rich-delta
+    // `consumeNativeDelta` reset rather than a full `rebuildFromCore()`, so a
+    // `rebuildFromCore` spy would never fire even though the content correctly
+    // updates. Assert the rebuild via its OBSERVABLE effect instead: `version`
+    // bumps on a genuine content-changing reset (see `RawCoMap.consumeNativeDelta`).
+    const versionBefore = map.version;
 
     // Now make an init transaction with an earlier timestamp (this should win)
     const earlierTime = laterTime - 500;
@@ -125,7 +131,7 @@ describe("init transaction meta", () => {
     });
 
     // The content should have been rebuilt
-    expect(rebuildSpy).toHaveBeenCalled();
+    expect(map.version).toBeGreaterThan(versionBefore);
 
     expect(map.get("version")).toBe("earlier");
   });
@@ -260,6 +266,12 @@ describe("init transaction meta", () => {
       );
     });
 
+    // `map` is a plain (non-group) coMap, so its content is fed by the native
+    // materializer (R3 stage-2b), which never populates the TS-only
+    // `verifiedTransactions` introspection array. Trigger the lazy TS-side load
+    // explicitly to inspect the raw per-transaction validity/reason.
+    map.core.getValidTransactions();
+
     // Check the raw verified transactions
     const allTransactions = map.core.verifiedTransactions;
     expect(allTransactions).toHaveLength(2);
@@ -297,6 +309,12 @@ describe("init transaction meta", () => {
       laterTime,
     );
 
+    // `map` is a plain (non-group) coMap, so its content is fed by the native
+    // materializer (R3 stage-2b), which never populates the TS-only
+    // `verifiedTransactions` introspection array. Trigger the lazy TS-side load
+    // explicitly to inspect the raw per-transaction validity/reason.
+    map.core.getValidTransactions();
+
     // Check the raw verified transactions
     const allTransactions = map.core.verifiedTransactions;
     expect(allTransactions).toHaveLength(2);
@@ -333,6 +351,12 @@ describe("init transaction meta", () => {
       laterTime,
     );
 
+    // `map` is a plain (non-group) coMap, so its content is fed by the native
+    // materializer (R3 stage-2b), which never populates the TS-only
+    // `verifiedTransactions` introspection array. Trigger the lazy TS-side load
+    // explicitly to inspect the raw per-transaction stage/validity.
+    map.core.getValidTransactions();
+
     // Check the transaction is marked as processed
     const laterTx = map.core.verifiedTransactions.find(
       (tx) => tx.madeAt === laterTime,
@@ -355,8 +379,16 @@ describe("init transaction meta", () => {
       );
     });
 
+    // The native receive path materializes the coMap view directly and does
+    // not keep the TS-only `verifiedTransactions` mirror live-updated for a
+    // native-gated map — re-pull it explicitly to see the fww flip reflected.
+    map.core.getValidTransactions();
+    const laterTxAfter = map.core.verifiedTransactions.find(
+      (tx) => tx.madeAt === laterTime,
+    );
+
     // The later transaction should now be invalid
-    expect(laterTx?.isValid).toBe(false);
+    expect(laterTxAfter?.isValid).toBe(false);
   });
 
   test("synced init transactions resolve correctly across nodes", async () => {

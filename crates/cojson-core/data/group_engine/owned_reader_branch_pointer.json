@@ -1,0 +1,107 @@
+{
+  "description": "a reader posts an unencrypted branch-pointer transaction (meta {branch, ownerId}, empty changes) on a map owned by a group. TS (permissions.ts:124-137) forces meta to {branch, ownerId}, changes to [], and marks it VALID (outcome validBranchPointerOnly) — the reader-branch-pointer trim. The native/Rust ownedByGroup engine does not yet port this and would mark it invalid, so this fixture is captured with the native kill switch forced.",
+  "covalues": [
+    {
+      "coId": "co_za1LqcEwBU6bk7WaqNXDGWJ5Q1p",
+      "headerJson": "{\"createdAt\":\"2026-07-04T03:10:38.403Z\",\"meta\":null,\"ruleset\":{\"group\":\"co_zmfpaXp2Ne9g2RgNor9H6TNAgtV\",\"type\":\"ownedByGroup\"},\"type\":\"comap\",\"uniqueness\":\"z3qS8YdJ57Y52dU2ps\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm_session_z72RzzxxXuJ6",
+          "signerId": "sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"base\\\",\\\"value\\\":1}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5Q5MEa3JSU5Z9uvkmesVaRdEFq5VsFyMwCuB5GhnwMCT6QQvFVmsNJqmt4xJy6raYTQHcX9EAnManTyXDNJro8q6"
+        },
+        {
+          "sessionId": "co_z6kwRhBtx4zGvwjAr3CCqc26tyX_session_ze6HdPPZvDLL",
+          "signerId": "signer_z7F3FsqtPYGNiXGy7dxYCMFM4TneNrEiSK1SuY6HprBWc",
+          "transactions": [
+            "{\"changes\":\"[]\",\"madeAt\":1783134638404,\"meta\":\"{\\\"branch\\\":\\\"feature-branch\\\",\\\"ownerId\\\":\\\"co_zjypS7X7QqcWS7NWfuzqbcujHBB\\\"}\",\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z2mYoJXM3pf5FxtkKWDuEe47KNdzTas6H7kVzTPsPUh7BRFg1UPHUtXupafwdNDhQWRBCGMwwd92Laf1BQ3ioYB6X"
+        }
+      ]
+    },
+    {
+      "coId": "co_zmfpaXp2Ne9g2RgNor9H6TNAgtV",
+      "headerJson": "{\"createdAt\":\"2026-07-04T03:10:38.402Z\",\"meta\":null,\"ruleset\":{\"initialAdmin\":\"sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":\"zGR4VasqHL5fvkctv\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm_session_z72RzzxxXuJ6",
+          "signerId": "sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638402,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z5gRigYNDuhdQSMAKU_for_sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm\\\",\\\"value\\\":\\\"sealed_UEJDU-oODZbilmZF5F8prZ8lyt36MRj5e2nzpDHVHISa-UaUozRyQTv9CUJUJ0Lez1pzGRVYBvq_BD_2VXVqhw9hJS3jHAGXfNg==\\\"}]\",\"madeAt\":1783134638402,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z5gRigYNDuhdQSMAKU\\\"}]\",\"madeAt\":1783134638402,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"groupSealer\\\",\\\"value\\\":\\\"key_z5gRigYNDuhdQSMAKU@sealer_z5HcKLEi3Hz9pJ1VX2r2mbvMeMszaWLm9fZ3dSNURXLxo\\\"}]\",\"madeAt\":1783134638402,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_z6kwRhBtx4zGvwjAr3CCqc26tyX\\\",\\\"value\\\":\\\"reader\\\"}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z5gRigYNDuhdQSMAKU_for_co_z6kwRhBtx4zGvwjAr3CCqc26tyX\\\",\\\"value\\\":\\\"sealed_Usq3tarR_jr9s-gcvSHJq671kR8dVC1BHpQlj75aT14AfRpXyoaRJqmhs5WHDELia_GAg0lUhiRaiK57-X2LBHXQIcKbzvOhL7A==\\\"}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z51U1FJBRKZV7VayiYiqgC48XHHJx3XKwRNjnryFyGBB8iQNz9YTyk8Ca9J6QBRrV82UyNLy5e21JbLVfgRxep7jf"
+        }
+      ]
+    },
+    {
+      "coId": "co_z6kwRhBtx4zGvwjAr3CCqc26tyX",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_zFw1mr7swJw1ERgWzkPgCVDrhv9HBEk3rVxcc5HxbHCgC/signer_z7F3FsqtPYGNiXGy7dxYCMFM4TneNrEiSK1SuY6HprBWc\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zFw1mr7swJw1ERgWzkPgCVDrhv9HBEk3rVxcc5HxbHCgC/signer_z7F3FsqtPYGNiXGy7dxYCMFM4TneNrEiSK1SuY6HprBWc_session_zgkjidzRwS5u",
+          "signerId": "signer_z7F3FsqtPYGNiXGy7dxYCMFM4TneNrEiSK1SuY6HprBWc",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zFw1mr7swJw1ERgWzkPgCVDrhv9HBEk3rVxcc5HxbHCgC/signer_z7F3FsqtPYGNiXGy7dxYCMFM4TneNrEiSK1SuY6HprBWc\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z5L6XHNt57J3ZF3zUf_for_sealer_zFw1mr7swJw1ERgWzkPgCVDrhv9HBEk3rVxcc5HxbHCgC/signer_z7F3FsqtPYGNiXGy7dxYCMFM4TneNrEiSK1SuY6HprBWc\\\",\\\"value\\\":\\\"sealed_U6_bK4Kxw6ofsITTA2pjzdQ-lPNM5DRIbwlV_s8Go0A8qHzANJoaK7Y4HAryE8m8drXe3ZWfNWRAw2QaSpkDTGqV4zFwkMLmvTw==\\\"}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z5L6XHNt57J3ZF3zUf\\\"}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5gjTcjWXkE9bWLeLSxMHgJFXbpxM6KT9jUxZHhY241fG9s1EYwrzpwyyVwnwatMGy35BxK8kbgreATR1pLtyyewu"
+        }
+      ]
+    },
+    {
+      "coId": "co_zjypS7X7QqcWS7NWfuzqbcujHBB",
+      "headerJson": "{\"createdAt\":\"2026-07-04T03:10:38.403Z\",\"meta\":null,\"ruleset\":{\"initialAdmin\":\"sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":\"z53iLRHWj6kC4fB5Yf\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm_session_z72RzzxxXuJ6",
+          "signerId": "sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z5W9efFbEm2L9o81sL_for_sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm\\\",\\\"value\\\":\\\"sealed_UNkoiKT_jeWLgzIgVPczr-h7asyOJ-BqVkWT9N1awa14IP4Vw1a8Nkvrki71SlyeBb1WP7tNTWe-uXyMvbUqhW7s1XHv_GONP2Q==\\\"}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z5W9efFbEm2L9o81sL\\\"}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"groupSealer\\\",\\\"value\\\":\\\"key_z5W9efFbEm2L9o81sL@sealer_zGBEXAfzrXDrv6HrDiFQhcsyj1DGG4WwVeG4uErssSSaj\\\"}]\",\"madeAt\":1783134638403,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z4rUTx7ud22D5Er8R3GJfHJgo8uWHrpuf8c2DSrgCUnY6dM9xK4LeU2goGJZ7BjXfRfmFaWQBMgjWfxZ6ziaNN9TE"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_za1LqcEwBU6bk7WaqNXDGWJ5Q1p": [
+      {
+        "sessionId": "sealer_z5dGMEaecQPL2y9fxYZqPXu5vzKzi179eMfPSjnQU1Q9D/signer_zFEqVCJKxvgAZWTATFykY8fezjcte3yHqpZjhoqxyfzdm_session_z72RzzxxXuJ6",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "co_z6kwRhBtx4zGvwjAr3CCqc26tyX_session_ze6HdPPZvDLL",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null,
+        "outcome": "validBranchPointerOnly",
+        "metaJson": "{\"branch\":\"feature-branch\",\"ownerId\":\"co_zjypS7X7QqcWS7NWfuzqbcujHBB\"}"
+      }
+    ]
+  },
+  "roleQueries": [
+    {
+      "groupId": "co_zmfpaXp2Ne9g2RgNor9H6TNAgtV",
+      "member": "co_z6kwRhBtx4zGvwjAr3CCqc26tyX",
+      "atTime": null,
+      "expectedRole": "reader"
+    }
+  ]
+}

@@ -140,7 +140,7 @@ describe("isStreaming", () => {
     }
 
     const mapInNewSession = await loadCoValueOrFail(newSession.node, map.id);
-    const impl = (mapInNewSession.core.verified as any).impl;
+    const impl = (mapInNewSession.core.verified as any).nodeCore;
     const isStreamingSpy = vi.spyOn(impl, "isStreaming");
     const getKnownStateWithStreamingSpy = vi.spyOn(
       impl,
@@ -171,7 +171,7 @@ describe("isStreaming", () => {
 
     map.core.verified.setStreamingKnownState({ [sessionId]: 2 });
 
-    const impl = (map.core.verified as any).impl;
+    const impl = (map.core.verified as any).nodeCore;
     const isStreamingSpy = vi.spyOn(impl, "isStreaming");
     const getKnownStateWithStreamingSpy = vi.spyOn(
       impl,
