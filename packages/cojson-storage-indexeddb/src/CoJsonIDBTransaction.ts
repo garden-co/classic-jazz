@@ -24,7 +24,7 @@ export class CoJsonIDBTransaction {
   declare tx: IDBTransaction;
 
   pendingRequests: ((txEntry: this) => void)[] = [];
-  rejectHandlers: (() => void)[] = [];
+  rejectHandlers: ((error: unknown) => void)[] = [];
 
   id = Math.random();
 
@@ -52,7 +52,27 @@ export class CoJsonIDBTransaction {
   }
 
   rollback() {
-    this.tx.abort();
+    try {
+      this.tx.abort();
+    } catch (error) {
+      // The transaction already finished or the connection is gone; aborting
+      // again would throw and mask the error that triggered the rollback
+    }
+  }
+
+  /**
+   * Rejects every queued request so no promise is left pending when the
+   * transaction can't make progress anymore (e.g. the connection was closed).
+   */
+  private failPendingRequests(error: unknown) {
+    this.failed = true;
+    this.pendingRequests = [];
+
+    const handlers = this.rejectHandlers;
+    this.rejectHandlers = [];
+    for (const handler of handlers) {
+      handler(error);
+    }
   }
 
   getObjectStore(name: StoreName) {
@@ -87,13 +107,17 @@ export class CoJsonIDBTransaction {
             resolve(result);
           } catch (error) {
             reject(error);
+            this.failPendingRequests(error);
           }
         });
       });
     }
 
     this.running = true;
-    return handler(this, next);
+    return handler(this, next).catch((error) => {
+      this.failPendingRequests(error);
+      throw error;
+    });
   }
 
   handleRequest<T>(handler: (txEntry: this) => IDBRequest<T>) {
@@ -102,15 +126,10 @@ export class CoJsonIDBTransaction {
         const request = handler(txEntry);
 
         request.onerror = () => {
-          this.failed = true;
-          this.tx.abort();
-          console.error(request.error);
+          // pushRequest fails the queued requests when this rejection
+          // reaches it; transaction() logs the error if the retry fails too
           reject(request.error);
-
-          // Don't leave any pending promise
-          for (const handler of this.rejectHandlers) {
-            handler();
-          }
+          this.rollback();
         };
 
         request.onsuccess = () => {
