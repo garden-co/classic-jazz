@@ -1,6 +1,7 @@
 import { Counter, Histogram, ValueType, metrics } from "@opentelemetry/api";
 import type { PeerState } from "../PeerState.js";
 import type { SyncMessage } from "../sync.js";
+import { ClientUsageTracker } from "./ClientUsageTracker.js";
 import { LinkedList } from "./LinkedList.js";
 
 /**
@@ -20,6 +21,7 @@ export class IncomingMessagesQueue {
   queues: [LinkedList<SyncMessage>, PeerState][];
   peerToQueue: WeakMap<PeerState, LinkedList<SyncMessage>>;
   currentQueue = 0;
+  private clientUsageTrackers: WeakMap<PeerState, ClientUsageTracker>;
 
   constructor(private processQueues: () => void) {
     this.pullCounter = metrics
@@ -71,9 +73,23 @@ export class IncomingMessagesQueue {
 
     this.queues = [];
     this.peerToQueue = new WeakMap();
+    this.clientUsageTrackers = new WeakMap();
+  }
+
+  private getClientUsageTracker(peer: PeerState): ClientUsageTracker {
+    let tracker = this.clientUsageTrackers.get(peer);
+    if (!tracker) {
+      tracker = new ClientUsageTracker(peer.id);
+      this.clientUsageTrackers.set(peer, tracker);
+    }
+    return tracker;
   }
 
   public push(msg: SyncMessage, peer: PeerState) {
+    if (peer.role === "client") {
+      this.getClientUsageTracker(peer).track(msg);
+    }
+
     const queue = this.peerToQueue.get(peer);
 
     if (!queue) {

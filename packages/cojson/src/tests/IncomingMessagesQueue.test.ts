@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { CLIENT_USAGE_CONFIG } from "../config.js";
+import { logger } from "../logger.js";
 import { PeerState } from "../PeerState.js";
 import { IncomingMessagesQueue } from "../queue/IncomingMessagesQueue.js";
 import { ConnectedPeerChannel } from "../streamUtils.js";
@@ -50,6 +52,30 @@ function createMockSyncMessage(
       id: `co_z${id}`,
     };
   }
+}
+
+function createContentMessageWithSize(
+  id: string,
+  sizeInBytes: number,
+): SyncMessage {
+  return {
+    action: "content",
+    id: `co_z${id}` as any,
+    priority: 3,
+    new: {
+      ["co_zTestSession_session_z123" as any]: {
+        after: 0,
+        newTransactions: [
+          {
+            privacy: "trusting" as const,
+            changes: new Uint8Array(sizeInBytes),
+            madeAt: 0,
+          },
+        ],
+        lastSignature: "signature_z123" as any,
+      },
+    },
+  };
 }
 
 function setup() {
@@ -449,6 +475,266 @@ describe("IncomingMessagesQueue", () => {
       expect(serverPushValue).toBe(0);
       expect(clientPullValue).toBe(0);
       expect(serverPullValue).toBe(0);
+    });
+  });
+
+  describe("client usage tracking", () => {
+    let warnSpy: ReturnType<typeof vi.spyOn>;
+    const savedConfig = { ...CLIENT_USAGE_CONFIG };
+
+    afterEach(() => {
+      vi.useRealTimers();
+      warnSpy?.mockRestore();
+      Object.assign(CLIENT_USAGE_CONFIG, savedConfig);
+    });
+
+    test("should not warn below message rate threshold", () => {
+      warnSpy = vi.spyOn(logger, "warn");
+      const { queue, peer1 } = setup();
+
+      for (
+        let i = 0;
+        i < CLIENT_USAGE_CONFIG.MAX_MESSAGES_PER_WINDOW - 1;
+        i++
+      ) {
+        queue.push(createMockSyncMessage(`msg-${i}`), peer1);
+      }
+
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("message rate"),
+        expect.anything(),
+      );
+    });
+
+    test("should warn when message count exceeds threshold", () => {
+      warnSpy = vi.spyOn(logger, "warn");
+      const { queue, peer1 } = setup();
+
+      for (
+        let i = 0;
+        i < CLIENT_USAGE_CONFIG.MAX_MESSAGES_PER_WINDOW + 1;
+        i++
+      ) {
+        queue.push(createMockSyncMessage(`msg-${i}`), peer1);
+      }
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("message rate"),
+        expect.objectContaining({
+          peerId: "peer1",
+          warningType: "message_rate",
+        }),
+      );
+    });
+
+    test("should warn when content bytes exceed threshold", () => {
+      warnSpy = vi.spyOn(logger, "warn");
+      const { queue, peer1 } = setup();
+
+      const largeMsg = createContentMessageWithSize(
+        "large",
+        CLIENT_USAGE_CONFIG.MAX_CONTENT_BYTES_PER_WINDOW + 1,
+      );
+      queue.push(largeMsg, peer1);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("content size"),
+        expect.objectContaining({
+          peerId: "peer1",
+          warningType: "content_size",
+        }),
+      );
+    });
+
+    test("should accumulate content bytes across multiple messages in same window", () => {
+      warnSpy = vi.spyOn(logger, "warn");
+      const { queue, peer1 } = setup();
+
+      const halfThreshold = Math.ceil(
+        CLIENT_USAGE_CONFIG.MAX_CONTENT_BYTES_PER_WINDOW / 2,
+      );
+
+      queue.push(createContentMessageWithSize("part1", halfThreshold), peer1);
+
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("content size"),
+        expect.anything(),
+      );
+
+      queue.push(
+        createContentMessageWithSize("part2", halfThreshold + 1),
+        peer1,
+      );
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("content size"),
+        expect.objectContaining({
+          peerId: "peer1",
+          warningType: "content_size",
+        }),
+      );
+    });
+
+    test("should warn at exponentially increasing thresholds", () => {
+      warnSpy = vi.spyOn(logger, "warn");
+      CLIENT_USAGE_CONFIG.MAX_MESSAGES_PER_WINDOW = 10;
+
+      const { queue, peer1 } = setup();
+
+      // First warning at 10
+      for (let i = 0; i < 11; i++) {
+        queue.push(createMockSyncMessage(`msg-${i}`), peer1);
+      }
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      // No warning between 10 and 20
+      for (let i = 11; i < 20; i++) {
+        queue.push(createMockSyncMessage(`msg-${i}`), peer1);
+      }
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      // Second warning at 20
+      queue.push(createMockSyncMessage("msg-20"), peer1);
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+
+      // Third warning at 40
+      for (let i = 21; i < 41; i++) {
+        queue.push(createMockSyncMessage(`msg-${i}`), peer1);
+      }
+      expect(warnSpy).toHaveBeenCalledTimes(3);
+    });
+
+    test("should warn again in a new window", () => {
+      vi.useFakeTimers();
+      warnSpy = vi.spyOn(logger, "warn");
+      CLIENT_USAGE_CONFIG.MAX_MESSAGES_PER_WINDOW = 10;
+
+      const { queue, peer1 } = setup();
+
+      // Exceed threshold in first window
+      for (let i = 0; i < 11; i++) {
+        queue.push(createMockSyncMessage(`msg-${i}`), peer1);
+      }
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      // Advance past window
+      vi.advanceTimersByTime(CLIENT_USAGE_CONFIG.WINDOW_SIZE + 1);
+
+      // Exceed threshold again in new window — should warn again
+      for (let i = 0; i < 11; i++) {
+        queue.push(createMockSyncMessage(`msg2-${i}`), peer1);
+      }
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+    });
+
+    test("should reset counters when window expires", () => {
+      vi.useFakeTimers();
+      warnSpy = vi.spyOn(logger, "warn");
+      const { queue, peer1 } = setup();
+
+      for (
+        let i = 0;
+        i < CLIENT_USAGE_CONFIG.MAX_MESSAGES_PER_WINDOW - 1;
+        i++
+      ) {
+        queue.push(createMockSyncMessage(`msg-${i}`), peer1);
+      }
+
+      // Advance past window
+      vi.advanceTimersByTime(CLIENT_USAGE_CONFIG.WINDOW_SIZE + 1);
+
+      // Push under threshold again — should not warn (window reset)
+      for (
+        let i = 0;
+        i < CLIENT_USAGE_CONFIG.MAX_MESSAGES_PER_WINDOW - 1;
+        i++
+      ) {
+        queue.push(createMockSyncMessage(`msg2-${i}`), peer1);
+      }
+
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("message rate"),
+        expect.anything(),
+      );
+    });
+
+    test("should not track server peers", () => {
+      warnSpy = vi.spyOn(logger, "warn");
+      const { queue } = setup();
+      const serverPeer = createMockPeerState("server-peer", "server");
+
+      for (
+        let i = 0;
+        i < CLIENT_USAGE_CONFIG.MAX_MESSAGES_PER_WINDOW + 100;
+        i++
+      ) {
+        queue.push(createMockSyncMessage(`msg-${i}`), serverPeer);
+      }
+
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("message rate"),
+        expect.anything(),
+      );
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("content size"),
+        expect.anything(),
+      );
+    });
+
+    test("message rate and content size warnings fire independently", () => {
+      warnSpy = vi.spyOn(logger, "warn");
+      const { queue, peer1 } = setup();
+
+      const largeMsg = createContentMessageWithSize(
+        "large",
+        CLIENT_USAGE_CONFIG.MAX_CONTENT_BYTES_PER_WINDOW + 1,
+      );
+      queue.push(largeMsg, peer1);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("content size"),
+        expect.objectContaining({ warningType: "content_size" }),
+      );
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("message rate"),
+        expect.anything(),
+      );
+    });
+
+    test("new PeerState instance gets fresh stats even with same peer ID", () => {
+      warnSpy = vi.spyOn(logger, "warn");
+      const { queue } = setup();
+
+      // First peer instance — push just under threshold
+      const peer1a = createMockPeerState("peer1");
+      for (
+        let i = 0;
+        i < CLIENT_USAGE_CONFIG.MAX_MESSAGES_PER_WINDOW - 1;
+        i++
+      ) {
+        queue.push(createMockSyncMessage(`msg-${i}`), peer1a);
+      }
+
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("message rate"),
+        expect.anything(),
+      );
+
+      // Second peer instance with same ID (simulates reconnect) — push under threshold again
+      // If stats leaked from the old instance, this would cross the threshold
+      const peer1b = createMockPeerState("peer1");
+      for (
+        let i = 0;
+        i < CLIENT_USAGE_CONFIG.MAX_MESSAGES_PER_WINDOW - 1;
+        i++
+      ) {
+        queue.push(createMockSyncMessage(`msg2-${i}`), peer1b);
+      }
+
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("message rate"),
+        expect.anything(),
+      );
     });
   });
 });

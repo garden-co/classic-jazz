@@ -82,3 +82,9 @@ export function setStorageReconciliationLockTTL(ttl: number) {
 export function setStorageReconciliationInterval(interval: number) {
   STORAGE_RECONCILIATION_CONFIG.RECONCILIATION_INTERVAL_MS = interval;
 }
+
+export const CLIENT_USAGE_CONFIG = {
+  WINDOW_SIZE: 60_000, // 60 seconds
+  MAX_MESSAGES_PER_WINDOW: 5_000, // 5000 messages
+  MAX_CONTENT_BYTES_PER_WINDOW: 200 * 1024 * 1024, // 200 MB
+};
