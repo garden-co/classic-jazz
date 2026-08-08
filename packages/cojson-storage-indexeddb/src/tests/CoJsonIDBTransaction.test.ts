@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { CoJsonIDBTransaction } from "../CoJsonIDBTransaction";
+import { IDBClient } from "../idbClient";
 
 const TEST_DB_NAME = "test-cojson-idb-transaction";
 
@@ -40,6 +41,9 @@ describe("CoJsonIDBTransaction", () => {
             unique: true,
           },
         );
+        db.createObjectStore("storageReconciliationLocks", {
+          keyPath: "key",
+        });
       };
 
       request.onsuccess = () => {
@@ -259,5 +263,147 @@ describe("CoJsonIDBTransaction", () => {
     ).rejects.toThrow(
       "Failed to execute 'objectStore' on 'IDBTransaction': The specified object store was not found.",
     );
+  });
+});
+
+describe("IDBClient", () => {
+  let db: IDBDatabase;
+
+  beforeEach(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open(TEST_DB_NAME, 1);
+
+      request.onerror = () => reject(request.error);
+
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        const coValues = db.createObjectStore("coValues", {
+          keyPath: "rowID",
+          autoIncrement: true,
+        });
+        coValues.createIndex("coValuesById", "id", { unique: true });
+        const sessions = db.createObjectStore("sessions", {
+          keyPath: "rowID",
+          autoIncrement: true,
+        });
+        sessions.createIndex("uniqueSessions", ["coValue", "sessionID"], {
+          unique: true,
+        });
+        sessions.createIndex("sessionsByCoValue", "coValue");
+        db.createObjectStore("transactions", {
+          keyPath: ["ses", "idx"],
+        });
+        db.createObjectStore("signatureAfter", {
+          keyPath: ["ses", "idx"],
+        });
+        const deletedCoValues = db.createObjectStore("deletedCoValues", {
+          keyPath: "coValueID",
+        });
+        deletedCoValues.createIndex("deletedCoValuesByStatus", "status", {
+          unique: false,
+        });
+        const unsyncedCoValues = db.createObjectStore("unsyncedCoValues", {
+          keyPath: "rowID",
+          autoIncrement: true,
+        });
+        unsyncedCoValues.createIndex("byCoValueId", "coValueId");
+        unsyncedCoValues.createIndex(
+          "uniqueUnsyncedCoValues",
+          ["coValueId", "peerId"],
+          { unique: true },
+        );
+        db.createObjectStore("storageReconciliationLocks", {
+          keyPath: "key",
+        });
+      };
+
+      request.onsuccess = () => {
+        db = request.result;
+        resolve();
+      };
+    });
+  });
+
+  afterEach(async () => {
+    db.close();
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(TEST_DB_NAME);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
+  });
+
+  test("close() marks the client as closed", () => {
+    const client = new IDBClient(db);
+    expect(client.isClosed()).toBe(false);
+    client.close();
+    expect(client.isClosed()).toBe(true);
+  });
+
+  test("close() is idempotent", () => {
+    const client = new IDBClient(db);
+    client.close();
+    client.close();
+    expect(client.isClosed()).toBe(true);
+  });
+
+  test("transaction() is a no-op after close", async () => {
+    const client = new IDBClient(db);
+
+    await client.transaction(
+      async (tx) => {
+        await tx.putUnsyncedCoValueRecord({
+          coValueId: "co_zBefore" as any,
+          peerId: "peer",
+        });
+      },
+      ["unsyncedCoValues"],
+    );
+
+    client.close();
+
+    let callbackRan = false;
+    await client.transaction(async () => {
+      callbackRan = true;
+    });
+    expect(callbackRan).toBe(false);
+
+    const freshDb = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(TEST_DB_NAME);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => resolve(req.result);
+    });
+    const readTx = freshDb.transaction("unsyncedCoValues", "readonly");
+    const all = await new Promise<any[]>((resolve) => {
+      const req = readTx.objectStore("unsyncedCoValues").getAll();
+      req.onsuccess = () => resolve(req.result);
+    });
+    freshDb.close();
+
+    expect(all).toHaveLength(1);
+    expect(all[0].coValueId).toBe("co_zBefore");
+  });
+
+  test("trackCoValuesSyncState is a no-op after close", async () => {
+    const client = new IDBClient(db);
+    client.close();
+
+    await client.trackCoValuesSyncState([
+      { id: "co_zTest" as any, peerId: "peer", synced: false },
+    ]);
+
+    const freshDb = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(TEST_DB_NAME);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => resolve(req.result);
+    });
+    const readTx = freshDb.transaction("unsyncedCoValues", "readonly");
+    const all = await new Promise<any[]>((resolve) => {
+      const req = readTx.objectStore("unsyncedCoValues").getAll();
+      req.onsuccess = () => resolve(req.result);
+    });
+    freshDb.close();
+
+    expect(all).toHaveLength(0);
   });
 });

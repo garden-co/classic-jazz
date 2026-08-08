@@ -132,9 +132,10 @@ export class LocalNode {
   }
 
   removeStorage() {
-    this.storage?.close();
-    this.storage = undefined;
     this.syncManager.removeStorage();
+    const storage = this.storage;
+    this.storage = undefined;
+    storage?.close();
   }
 
   /**

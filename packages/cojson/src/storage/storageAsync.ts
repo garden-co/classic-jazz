@@ -581,6 +581,16 @@ export class StorageApiAsync implements StorageAPI {
     this.deletedCoValuesEraserScheduler?.dispose();
     this.inMemoryCoValues.clear();
     this.knownStates.clear();
-    return this.storeQueue.close();
+
+    const pendingStore = this.storeQueue.close();
+
+    return (async () => {
+      await pendingStore;
+      try {
+        await this.dbClient.close?.();
+      } catch {
+        // Closing errors are non-actionable
+      }
+    })();
   }
 }

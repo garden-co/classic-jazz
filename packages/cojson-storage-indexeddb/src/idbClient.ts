@@ -239,12 +239,31 @@ export class IDBTransaction implements DBTransactionInterfaceAsync {
 
 export class IDBClient implements DBClientInterfaceAsync {
   private db;
+  private closed = false;
 
   activeTransaction: CoJsonIDBTransaction | undefined;
   autoBatchingTransaction: CoJsonIDBTransaction | undefined;
 
   constructor(db: IDBDatabase) {
     this.db = db;
+
+    this.db.onclose = () => {
+      this.closed = true;
+    };
+  }
+
+  close() {
+    if (this.closed) return;
+    this.closed = true;
+    try {
+      this.db.close();
+    } catch {
+      // Already closing
+    }
+  }
+
+  isClosed() {
+    return this.closed;
   }
 
   async getCoValue(coValueId: RawCoID): Promise<StoredCoValueRow | undefined> {
@@ -319,6 +338,8 @@ export class IDBClient implements DBClientInterfaceAsync {
     operationsCallback: (tx: IDBTransaction) => Promise<unknown>,
     storeNames?: StoreName[],
   ) {
+    if (this.closed) return;
+
     const tx = new CoJsonIDBTransaction(this.db, storeNames);
 
     try {
