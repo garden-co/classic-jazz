@@ -398,4 +398,29 @@ class SessionMapAdapter implements SessionMapImpl {
       undefined
     );
   }
+
+  // Batch decrypt fast path. Deleted from the prototype below when the
+  // loaded native binary doesn't expose `decryptTransactions`, so callers
+  // transparently fall back to the per-transaction path.
+  decryptTransactions?(
+    sessionId: string,
+    indices: Uint32Array,
+    keySecret: string,
+  ): string | undefined {
+    // The napi binding takes Vec<u32>, which maps from a plain JS array.
+    return (
+      this.sessionMap.decryptTransactions(
+        sessionId,
+        Array.from(indices),
+        keySecret,
+      ) ?? undefined
+    );
+  }
+}
+
+// Whether the loaded (possibly prebuilt, possibly outdated) native binary
+// exposes the batch decrypt fast path is a static property of the binary:
+// detect it once, instead of feature-probing per adapter instance.
+if (typeof NativeSessionMap.prototype.decryptTransactions !== "function") {
+  delete SessionMapAdapter.prototype.decryptTransactions;
 }

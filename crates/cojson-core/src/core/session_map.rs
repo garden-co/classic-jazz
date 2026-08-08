@@ -4,11 +4,48 @@
 //! for a single CoValue, including the header, sessions, and known state tracking.
 
 use crate::core::keys::{CoID, KeyID, KeySecret, Signature, SignerID, SignerSecret};
-use crate::core::session_log::{SessionID, SessionLogInternal, Transaction, TransactionMode};
+use crate::core::session_log::{
+    SessionID, SessionLogInternal, Transaction, TransactionMode, TxInfo,
+};
 use crate::core::CoJsonCoreError;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::BTreeMap;
+
+/// Borrowed view of an incoming transaction for single-pass deserialization.
+/// String fields borrow directly from the source JSON when they contain no
+/// escapes (`Cow::Borrowed`), avoiding owned allocations over large payloads.
+#[derive(Deserialize)]
+struct TxIn<'a> {
+    #[serde(rename = "encryptedChanges", borrow, default)]
+    encrypted_changes: Option<Cow<'a, str>>,
+    #[serde(rename = "keyUsed", borrow, default)]
+    key_used: Option<Cow<'a, str>>,
+    #[serde(borrow, default)]
+    changes: Option<Cow<'a, str>>,
+    #[serde(rename = "madeAt")]
+    made_at: serde_json::Number,
+    #[serde(borrow, default)]
+    meta: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    privacy: Cow<'a, str>,
+}
+
+/// Pre-validated transaction ready to be staged, borrowing from the parsed batch.
+enum StagedTx<'a> {
+    Private {
+        encrypted_changes: &'a str,
+        key_used: &'a str,
+        made_at: u64,
+        meta: Option<&'a str>,
+    },
+    Trusting {
+        changes: &'a str,
+        made_at: u64,
+        meta: Option<&'a str>,
+    },
+}
 
 /// Result of creating a new transaction, containing the signature and transaction data
 #[derive(Debug, Clone)]
@@ -409,7 +446,95 @@ impl SessionMapImpl {
             return Err(SessionMapError::DeletedCoValue(self.co_id.0.clone()));
         }
 
-        let transactions: Vec<Transaction> = serde_json::from_str(transactions_json)?;
+        // Fast path: the incoming batch is, in practice, already byte-exactly
+        // canonical (produced by our own canonical serializer / the JS
+        // `stringifyTransactions`). Try a strict single-pass shape scan that
+        // validates the whole batch and yields, per tx, the exact canonical
+        // byte range plus payload spans with zero re-serialization. On ANY
+        // deviation it returns None and we fall back to the serde parse +
+        // canonical rebuild below (which stays the trivially-correct fallback).
+        if let Some(scanned) = scan_canonical_private_batch(transactions_json) {
+            let total_size: usize = scanned.iter().map(|tx| tx.changes_len).sum();
+
+            let session_log = self
+                .sessions
+                .entry(session_id.to_string())
+                .or_insert_with(|| {
+                    SessionLogInternal::new(
+                        self.co_id.clone(),
+                        SessionID(session_id.to_string()),
+                        signer_id.map(|s| SignerID(s.to_string())),
+                    )
+                });
+
+            for tx in &scanned {
+                // The scanned range IS the canonical serialization, so copying
+                // it verbatim is byte-identical to re-serializing, and the
+                // recorded spans (relative to the range start) stay valid in
+                // the copy.
+                let tx_json = transactions_json[tx.start..tx.end].to_string();
+                session_log.stage_canonical(tx_json, tx.tx_info.clone());
+            }
+
+            return self.commit_session_batch(session_id, total_size, signature, skip_verify);
+        }
+
+        // Single-pass borrowed parse: strings borrow directly from
+        // `transactions_json` (Cow::Borrowed) except when they need unescaping.
+        let parsed: Vec<TxIn> = serde_json::from_str(transactions_json)?;
+
+        // Validate + convert the ENTIRE batch up front, before staging anything
+        // into the session log. This guarantees a mid-batch error (e.g. a bad
+        // made_at) can never leave stale entries in the pending staging area.
+        let mut staged: Vec<StagedTx> = Vec::with_capacity(parsed.len());
+        let mut total_size: usize = 0;
+        for tx in &parsed {
+            let made_at = tx.made_at.as_u64().ok_or_else(|| {
+                SessionMapError::InvalidTransaction(
+                    "Failed to convert made_at to u64".to_string(),
+                )
+            })?;
+
+            match tx.privacy.as_ref() {
+                "private" => {
+                    let encrypted_changes = tx.encrypted_changes.as_deref().ok_or_else(|| {
+                        SessionMapError::InvalidTransaction(
+                            "Private transaction missing encryptedChanges".to_string(),
+                        )
+                    })?;
+                    let key_used = tx.key_used.as_deref().ok_or_else(|| {
+                        SessionMapError::InvalidTransaction(
+                            "Private transaction missing keyUsed".to_string(),
+                        )
+                    })?;
+                    total_size += encrypted_changes.len();
+                    staged.push(StagedTx::Private {
+                        encrypted_changes,
+                        key_used,
+                        made_at,
+                        meta: tx.meta.as_deref(),
+                    });
+                }
+                "trusting" => {
+                    let changes = tx.changes.as_deref().ok_or_else(|| {
+                        SessionMapError::InvalidTransaction(
+                            "Trusting transaction missing changes".to_string(),
+                        )
+                    })?;
+                    total_size += changes.len();
+                    staged.push(StagedTx::Trusting {
+                        changes,
+                        made_at,
+                        meta: tx.meta.as_deref(),
+                    });
+                }
+                other => {
+                    return Err(SessionMapError::InvalidTransaction(format!(
+                        "Unknown transaction privacy: {other}"
+                    )));
+                }
+            }
+        }
 
         // Get or create session log
         let session_log = self
@@ -423,50 +548,41 @@ impl SessionMapImpl {
                 )
             });
 
-        // Calculate size of transactions being added (for in-between signature tracking)
-        let mut total_size: usize = 0;
-        for tx in &transactions {
-            let tx_size = match tx {
-                Transaction::Private(private_tx) => private_tx.encrypted_changes.value.len(),
-                Transaction::Trusting(trusting_tx) => trusting_tx.changes.len(),
-            };
-            total_size += tx_size;
-        }
-
-        // Add transactions to staging area
-        for tx in transactions.into_iter() {
-            match tx {
-                Transaction::Private(private_tx) => {
-                    session_log.add_existing_private_transaction(
-                        private_tx.encrypted_changes.value,
-                        private_tx.key_used.0,
-                        private_tx.made_at.as_u64().map_or_else(
-                            || {
-                                Err(SessionMapError::InvalidTransaction(
-                                    "Failed to convert made_at to u64".to_string(),
-                                ))
-                            },
-                            |u| Ok(u),
-                        )?,
-                        private_tx.meta.map(|m| m.value),
-                    )?;
-                }
-                Transaction::Trusting(trusting_tx) => {
-                    session_log.add_existing_trusting_transaction(
-                        trusting_tx.changes,
-                        trusting_tx.made_at.as_u64().map_or_else(
-                            || {
-                                Err(SessionMapError::InvalidTransaction(
-                                    "Failed to convert made_at to u64".to_string(),
-                                ))
-                            },
-                            |u| Ok(u),
-                        )?,
-                        trusting_tx.meta,
-                    )?;
-                }
+        // Stage the pre-validated batch (canonical serialization happens here).
+        for tx in &staged {
+            match *tx {
+                StagedTx::Private {
+                    encrypted_changes,
+                    key_used,
+                    made_at,
+                    meta,
+                } => session_log.stage_existing_private(encrypted_changes, key_used, made_at, meta),
+                StagedTx::Trusting {
+                    changes,
+                    made_at,
+                    meta,
+                } => session_log.stage_existing_trusting(changes, made_at, meta),
             }
         }
+
+        self.commit_session_batch(session_id, total_size, signature, skip_verify)
+    }
+
+    /// Commit a freshly-staged batch on `session_id`'s session log: verify +
+    /// commit the signature, update size tracking / in-between signatures, and
+    /// refresh known state. Shared tail of both the fast-scan and serde import
+    /// paths; the session log must already exist with the batch staged.
+    fn commit_session_batch(
+        &mut self,
+        session_id: &str,
+        total_size: usize,
+        signature: &str,
+        skip_verify: bool,
+    ) -> Result<(), SessionMapError> {
+        let session_log = self
+            .sessions
+            .get_mut(session_id)
+            .expect("session log must exist after staging");
 
         // Commit transactions with signature verification
         let sig = Signature(signature.to_string());
@@ -826,6 +942,51 @@ impl SessionMapImpl {
         Ok(session_log
             .decrypt_next_transaction_meta_json(tx_index, KeySecret(key_secret.to_string()))?)
     }
+
+    /// Decrypt many transactions in one call. Returns a JSON array string where
+    /// element `i` is the decrypted changes JSON of `indices[i]`, or `null` if
+    /// that transaction could not be decrypted (missing, prefix mismatch, bad
+    /// base64, invalid UTF-8 after decrypt, etc. — a single bad tx must NOT fail
+    /// the batch).
+    ///
+    /// Returns `None` only if the session doesn't exist. The decrypted changes
+    /// are themselves JSON array texts and are embedded verbatim; plaintext is
+    /// not re-validated as JSON here (the JS side falls back to per-tx decrypt if
+    /// the combined parse fails).
+    pub fn decrypt_transactions(
+        &self,
+        session_id: &str,
+        indices: &[u32],
+        key_secret: &str,
+    ) -> Option<String> {
+        let session_log = self.sessions.get(session_id)?;
+        let key_secret = KeySecret(key_secret.to_string());
+
+        // Preallocate: sum of stored tx JSON lengths (an upper bound on the
+        // decrypted sizes) + separators + brackets.
+        let mut capacity = indices.len() + 2;
+        for &idx in indices {
+            if let Some(tx_json) = session_log.get_transaction(idx as usize) {
+                capacity += tx_json.len();
+            } else {
+                capacity += 4; // "null"
+            }
+        }
+
+        let mut out = String::with_capacity(capacity);
+        out.push('[');
+        for (i, &idx) in indices.iter().enumerate() {
+            if i > 0 {
+                out.push(',');
+            }
+            match session_log.decrypt_next_transaction_changes_json(idx, key_secret.clone()) {
+                Ok(decrypted) => out.push_str(&decrypted),
+                Err(_) => out.push_str("null"),
+            }
+        }
+        out.push(']');
+        Some(out)
+    }
 }
 
 // ============================================================================
@@ -873,6 +1034,166 @@ fn combine_known_state_sessions(target: &mut KnownStateSessions, source: &KnownS
             .and_modify(|c| *c = (*c).max(count))
             .or_insert(count);
     }
+}
+
+// ============================================================================
+// Canonical-shape fast scan
+// ============================================================================
+
+/// A transaction validated by the canonical-shape fast scan.
+struct ScannedTx {
+    /// Byte range of the tx element within the source batch. The slice
+    /// `input[start..end]` IS the canonical serialization of the tx.
+    start: usize,
+    end: usize,
+    /// Payload spans, with offsets relative to `start` (i.e. into the copied
+    /// canonical string), matching `TxInfo` semantics exactly.
+    tx_info: TxInfo,
+    /// Byte length of the encrypted `<P>` payload, for tx-size tracking.
+    changes_len: usize,
+}
+
+/// Strict single-pass scan of a whole batch as a canonical JSON array of
+/// PRIVATE transactions. Returns `Some(txs)` only if the ENTIRE input matches
+/// the exact byte shape our canonical serializer emits (leading `[`, elements
+/// separated by a single `,`, trailing `]`, no whitespace, exact field order,
+/// escape-free payloads). Returns `None` on ANY deviation — including a
+/// mixed-in trusting tx or an escaped payload — so the caller falls back to the
+/// serde path for the whole batch.
+fn scan_canonical_private_batch(input: &str) -> Option<Vec<ScannedTx>> {
+    let b = input.as_bytes();
+    let n = b.len();
+    if n < 2 || b[0] != b'[' {
+        return None;
+    }
+    // Empty array: `[]`.
+    if b[1] == b']' {
+        return if n == 2 { Some(Vec::new()) } else { None };
+    }
+
+    let mut txs = Vec::new();
+    let mut pos = 1;
+    loop {
+        let (tx_info, changes_len, consumed) = scan_canonical_private_tx(&b[pos..])?;
+        txs.push(ScannedTx {
+            start: pos,
+            end: pos + consumed,
+            tx_info,
+            changes_len,
+        });
+        pos += consumed;
+        match b.get(pos) {
+            Some(&b',') => pos += 1,
+            Some(&b']') => {
+                return if pos + 1 == n { Some(txs) } else { None };
+            }
+            _ => return None,
+        }
+    }
+}
+
+/// Scan ONE canonical private-tx element at the start of `b`. Returns
+/// `(tx_info, changes_len, consumed)` where the spans in `tx_info` are relative
+/// to `b[0]` and `consumed` is the byte length of the `{...}` element. Returns
+/// `None` on any deviation from the exact canonical shape:
+///
+///   {"encryptedChanges":"<P>","keyUsed":"<K>","madeAt":<N>,"privacy":"private"}
+///   {"encryptedChanges":"<P>","keyUsed":"<K>","madeAt":<N>,"meta":"<M>","privacy":"private"}
+///
+/// with `<P>`, `<K>`, `<M>` containing no `"`, no `\` and no byte < 0x20, and
+/// `<N>` a canonical u64 (`0` or `[1-9][0-9]*`, fitting in u64).
+fn scan_canonical_private_tx(b: &[u8]) -> Option<(TxInfo, usize, usize)> {
+    let mut pos = eat(b, 0, br#"{"encryptedChanges":""#)?;
+    let (changes_start, changes_end, after) = scan_json_string_body(b, pos)?;
+    pos = after;
+
+    pos = eat(b, pos, br#","keyUsed":""#)?;
+    let (_, _, after) = scan_json_string_body(b, pos)?;
+    pos = after;
+
+    pos = eat(b, pos, br#","madeAt":"#)?;
+    pos = scan_canonical_u64(b, pos)?;
+
+    let meta_span = if let Some(after) = eat(b, pos, br#","meta":""#) {
+        let (meta_start, meta_end, after) = scan_json_string_body(b, after)?;
+        pos = after;
+        Some((meta_start as u32, meta_end as u32))
+    } else {
+        None
+    };
+
+    pos = eat(b, pos, br#","privacy":"private"}"#)?;
+
+    Some((
+        TxInfo::Private {
+            changes: (changes_start as u32, changes_end as u32),
+            meta: meta_span,
+        },
+        changes_end - changes_start,
+        pos,
+    ))
+}
+
+/// If `lit` occurs at `b[pos..]`, return the position just past it.
+#[inline]
+fn eat(b: &[u8], pos: usize, lit: &[u8]) -> Option<usize> {
+    let end = pos.checked_add(lit.len())?;
+    if end <= b.len() && &b[pos..end] == lit {
+        Some(end)
+    } else {
+        None
+    }
+}
+
+/// Scan an escape-free JSON string body starting at `pos` (just after the
+/// opening quote) up to the closing `"`. Returns `(value_start, value_end,
+/// pos_after_closing_quote)`. Fails on any `\\` or control byte < 0x20 — i.e.
+/// anything that would require JSON escaping and thus make the raw bytes
+/// non-canonical / non-sliceable.
+#[inline]
+fn scan_json_string_body(b: &[u8], pos: usize) -> Option<(usize, usize, usize)> {
+    let mut i = pos;
+    while i < b.len() {
+        let c = b[i];
+        if c == b'"' {
+            return Some((pos, i, i + 1));
+        }
+        if c == b'\\' || c < 0x20 {
+            return None;
+        }
+        i += 1;
+    }
+    None
+}
+
+/// Scan a canonical JSON u64 at `pos`: exactly `0`, or `[1-9][0-9]*` fitting in
+/// u64. Returns the position just past the last digit, or `None` on a leading
+/// zero, non-digit, or overflow (the serde fallback then handles the value).
+#[inline]
+fn scan_canonical_u64(b: &[u8], pos: usize) -> Option<usize> {
+    let first = *b.get(pos)?;
+    if first == b'0' {
+        let next = pos + 1;
+        // A `0` must stand alone; `0` followed by a digit is a non-canonical
+        // leading zero.
+        if b.get(next).is_some_and(|c| c.is_ascii_digit()) {
+            return None;
+        }
+        return Some(next);
+    }
+    if !(b'1'..=b'9').contains(&first) {
+        return None;
+    }
+    let mut i = pos;
+    let mut val: u64 = 0;
+    while let Some(&c) = b.get(i) {
+        if !c.is_ascii_digit() {
+            break;
+        }
+        val = val.checked_mul(10)?.checked_add((c - b'0') as u64)?;
+        i += 1;
+    }
+    Some(i)
 }
 
 // ============================================================================
@@ -1280,5 +1601,459 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
+    }
+
+    // ========================================================================
+    // Batch decrypt + up-front-parse atomicity tests
+    // ========================================================================
+
+    /// Build a session map with `n` private transactions whose plaintext changes
+    /// are `["v0"]`, `["v1"]`, ... Returns (map, session_id, key_secret).
+    fn map_with_private_txs(n: usize) -> (SessionMapImpl, String, String) {
+        use crate::core::keys::SignerSecret;
+        use ed25519_dalek::SigningKey;
+        use rand_core::OsRng;
+
+        let mut map = create_test_session_map("co_test", TEST_HEADER);
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let signer_secret: SignerSecret = signing_key.into();
+        let key_secret = format!("keySecret_z{}", bs58::encode([9u8; 32]).into_string());
+        let key_id = "key_zTESTKEY".to_string();
+        let session_id = "co_test_session_zAAAAAAAAAAAA".to_string();
+
+        for i in 0..n {
+            let changes = format!(r#"["v{}"]"#, i);
+            map.make_new_private_transaction(
+                session_id.clone(),
+                signer_secret.0.clone(),
+                &changes,
+                key_id.clone(),
+                key_secret.clone(),
+                None,
+                1234567890 + i as u64,
+            )
+            .unwrap();
+        }
+
+        (map, session_id, key_secret)
+    }
+
+    #[test]
+    fn test_decrypt_transactions_batch() {
+        let (map, session_id, key_secret) = map_with_private_txs(3);
+
+        let out = map
+            .decrypt_transactions(&session_id, &[0, 1, 2], &key_secret)
+            .unwrap();
+        assert_eq!(out, r#"[["v0"],["v1"],["v2"]]"#);
+    }
+
+    #[test]
+    fn test_decrypt_transactions_bad_index_returns_null_in_position() {
+        let (map, session_id, key_secret) = map_with_private_txs(2);
+
+        // Index 99 doesn't exist -> null in that position, batch still succeeds.
+        let out = map
+            .decrypt_transactions(&session_id, &[0, 99, 1], &key_secret)
+            .unwrap();
+        assert_eq!(out, r#"[["v0"],null,["v1"]]"#);
+    }
+
+    #[test]
+    fn test_decrypt_transactions_nonexistent_session_returns_none() {
+        let (map, _session_id, key_secret) = map_with_private_txs(1);
+        assert!(map
+            .decrypt_transactions("no_such_session", &[0], &key_secret)
+            .is_none());
+    }
+
+    #[test]
+    fn test_pending_cleared_on_malformed_batch() {
+        // A batch where the second tx has a non-integer madeAt must be rejected
+        // WHOLESALE, leaving no session/pending state behind (up-front parse).
+        let mut map = create_test_session_map("co_test", TEST_HEADER);
+        let session_id = "co_test_session_zBBBBBBBBBBBB";
+        let bad_batch = r#"[
+            {"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":1,"privacy":"private"},
+            {"encryptedChanges":"encrypted_Ubbb","keyUsed":"key_z1","madeAt":1.5,"privacy":"private"}
+        ]"#;
+
+        let result = map.add_transactions(session_id, None, bad_batch, "signature_zX", false);
+        assert!(result.is_err());
+
+        // No session should have been created, and certainly nothing committed.
+        assert!(map.get_transaction_count(session_id).is_none());
+    }
+
+    #[test]
+    fn test_add_transactions_missing_required_field_rejects_batch() {
+        let mut map = create_test_session_map("co_test", TEST_HEADER);
+        let session_id = "co_test_session_zCCCCCCCCCCCC";
+        // Private tx missing keyUsed.
+        let bad_batch =
+            r#"[{"encryptedChanges":"encrypted_Uaaa","madeAt":1,"privacy":"private"}]"#;
+
+        let result = map.add_transactions(session_id, None, bad_batch, "signature_zX", false);
+        assert!(result.is_err());
+        assert!(map.get_transaction_count(session_id).is_none());
+    }
+
+    // ========================================================================
+    // Canonical-shape fast scan tests
+    // ========================================================================
+
+    /// Slice `tx_json[start..end]` for a `TxInfo::Private` span.
+    fn span_str<'a>(tx_json: &'a str, span: (u32, u32)) -> &'a str {
+        &tx_json[span.0 as usize..span.1 as usize]
+    }
+
+    #[test]
+    fn test_fast_scan_accepts_canonical_private_without_meta() {
+        let batch = r#"[{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":0,"privacy":"private"}]"#;
+        let scanned = scan_canonical_private_batch(batch).expect("should fast-scan");
+        assert_eq!(scanned.len(), 1);
+        let tx = &scanned[0];
+        let tx_json = &batch[tx.start..tx.end];
+        match tx.tx_info {
+            TxInfo::Private { changes, meta } => {
+                // Span is WITHOUT quotes, INCLUDING the encrypted_U prefix.
+                assert_eq!(span_str(tx_json, changes), "encrypted_Uaaa");
+                assert!(meta.is_none());
+                assert_eq!(tx.changes_len, "encrypted_Uaaa".len());
+            }
+            _ => panic!("expected Private"),
+        }
+    }
+
+    #[test]
+    fn test_fast_scan_accepts_canonical_private_with_meta() {
+        let batch = r#"[{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":123,"meta":"encrypted_Ubbb","privacy":"private"},{"encryptedChanges":"encrypted_Uccc","keyUsed":"key_z1","madeAt":124,"privacy":"private"}]"#;
+        let scanned = scan_canonical_private_batch(batch).expect("should fast-scan");
+        assert_eq!(scanned.len(), 2);
+
+        let tx0 = &scanned[0];
+        let tx0_json = &batch[tx0.start..tx0.end];
+        match tx0.tx_info {
+            TxInfo::Private { changes, meta } => {
+                assert_eq!(span_str(tx0_json, changes), "encrypted_Uaaa");
+                let meta = meta.expect("meta present");
+                assert_eq!(span_str(tx0_json, meta), "encrypted_Ubbb");
+            }
+            _ => panic!("expected Private"),
+        }
+
+        let tx1 = &scanned[1];
+        let tx1_json = &batch[tx1.start..tx1.end];
+        match tx1.tx_info {
+            TxInfo::Private { changes, meta } => {
+                assert_eq!(span_str(tx1_json, changes), "encrypted_Uccc");
+                assert!(meta.is_none());
+            }
+            _ => panic!("expected Private"),
+        }
+    }
+
+    #[test]
+    fn test_fast_scan_empty_array() {
+        assert_eq!(scan_canonical_private_batch("[]").unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_fast_scan_declines_deviations() {
+        // Trailing whitespace inside array framing.
+        assert!(scan_canonical_private_batch(
+            r#"[ {"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":1,"privacy":"private"}]"#
+        )
+        .is_none());
+        // Trusting tx (different shape).
+        assert!(scan_canonical_private_batch(
+            r#"[{"changes":"[1]","madeAt":1,"privacy":"trusting"}]"#
+        )
+        .is_none());
+        // Escaped payload (backslash).
+        assert!(scan_canonical_private_batch(
+            r#"[{"encryptedChanges":"encrypted_U\naa","keyUsed":"key_z1","madeAt":1,"privacy":"private"}]"#
+        )
+        .is_none());
+        // Leading-zero madeAt.
+        assert!(scan_canonical_private_batch(
+            r#"[{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":01,"privacy":"private"}]"#
+        )
+        .is_none());
+        // Float madeAt.
+        assert!(scan_canonical_private_batch(
+            r#"[{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":1.5,"privacy":"private"}]"#
+        )
+        .is_none());
+        // Reordered fields.
+        assert!(scan_canonical_private_batch(
+            r#"[{"keyUsed":"key_z1","encryptedChanges":"encrypted_Uaaa","madeAt":1,"privacy":"private"}]"#
+        )
+        .is_none());
+        // Trailing junk after closing bracket.
+        assert!(scan_canonical_private_batch(
+            r#"[{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":1,"privacy":"private"}] "#
+        )
+        .is_none());
+        // Missing comma between elements.
+        assert!(scan_canonical_private_batch(
+            r#"[{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":1,"privacy":"private"}{"encryptedChanges":"encrypted_Ubbb","keyUsed":"key_z1","madeAt":2,"privacy":"private"}]"#
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn test_fast_scan_accepts_large_canonical_madeat() {
+        let big = u64::MAX;
+        let batch = format!(
+            r#"[{{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":{},"privacy":"private"}}]"#,
+            big
+        );
+        assert!(scan_canonical_private_batch(&batch).is_some());
+        // One past u64::MAX overflows -> declines.
+        let overflow = format!(
+            r#"[{{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":{}0,"privacy":"private"}}]"#,
+            big
+        );
+        assert!(scan_canonical_private_batch(&overflow).is_none());
+    }
+
+    /// Fixture: a validly-signed batch of private transactions produced by a
+    /// "sender" session map, plus everything a receiver needs to import it.
+    struct BatchFixture {
+        /// Canonical batch string (exactly what `stringifyTransactions` emits).
+        batch: String,
+        signature: String,
+        signer_id: String,
+        session_id: String,
+        key_secret: String,
+        plaintext: Vec<String>,
+    }
+
+    fn build_signed_private_batch(n: usize, with_meta: bool) -> BatchFixture {
+        use crate::core::keys::{SignerID, SignerSecret};
+        use ed25519_dalek::SigningKey;
+        use rand_core::OsRng;
+
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let signer_id: SignerID = signing_key.verifying_key().into();
+        let signer_secret: SignerSecret = signing_key.into();
+        let key_secret = format!("keySecret_z{}", bs58::encode([9u8; 32]).into_string());
+        let key_id = "key_zTESTKEY".to_string();
+        let session_id = "co_test_session_zAAAAAAAAAAAA".to_string();
+
+        let mut producer = create_test_session_map("co_test", TEST_HEADER);
+        let mut plaintext = Vec::with_capacity(n);
+        for i in 0..n {
+            let changes = format!(r#"["v{}"]"#, i);
+            let meta = if with_meta {
+                Some(format!(r#"{{"m":{}}}"#, i))
+            } else {
+                None
+            };
+            producer
+                .make_new_private_transaction(
+                    session_id.clone(),
+                    signer_secret.0.clone(),
+                    &changes,
+                    key_id.clone(),
+                    key_secret.clone(),
+                    meta,
+                    1234567890 + i as u64,
+                )
+                .unwrap();
+            plaintext.push(changes);
+        }
+
+        let txs = producer.get_session_transactions(&session_id, 0).unwrap();
+        let signature = producer.get_last_signature(&session_id).unwrap();
+        // Byte-for-byte the canonical framing produced by stringifyTransactions.
+        let batch = format!("[{}]", txs.join(","));
+
+        BatchFixture {
+            batch,
+            signature,
+            signer_id: signer_id.0,
+            session_id,
+            key_secret,
+            plaintext,
+        }
+    }
+
+    #[test]
+    fn test_fast_scan_matches_serde_fallback_and_verifies() {
+        // Real signed batch; the canonical framing must trigger the fast path.
+        let fx = build_signed_private_batch(5, true);
+        assert!(
+            scan_canonical_private_batch(&fx.batch).is_some(),
+            "fixture batch should be fast-scannable"
+        );
+
+        // Fast path: exact canonical framing.
+        let mut fast_map = create_test_session_map("co_test", TEST_HEADER);
+        fast_map
+            .add_transactions(
+                &fx.session_id,
+                Some(&fx.signer_id),
+                &fx.batch,
+                &fx.signature,
+                false, // exercise signature verification (hash byte-identity)
+            )
+            .expect("fast path must commit + verify");
+
+        // Serde fallback: inject a space after `[` to break the strict framing.
+        let ws_batch = format!("[ {}", &fx.batch[1..]);
+        assert!(
+            scan_canonical_private_batch(&ws_batch).is_none(),
+            "whitespace framing must decline the fast scan"
+        );
+        let mut serde_map = create_test_session_map("co_test", TEST_HEADER);
+        serde_map
+            .add_transactions(
+                &fx.session_id,
+                Some(&fx.signer_id),
+                &ws_batch,
+                &fx.signature,
+                false,
+            )
+            .expect("serde fallback must commit + verify");
+
+        // Both paths must store byte-identical canonical transactions and
+        // decrypt identically (spans identical) to the original plaintext.
+        assert_eq!(
+            fast_map.get_transaction_count(&fx.session_id),
+            Some(fx.plaintext.len() as u32)
+        );
+        for i in 0..fx.plaintext.len() as u32 {
+            let fast_tx = fast_map.get_transaction(&fx.session_id, i).unwrap();
+            let serde_tx = serde_map.get_transaction(&fx.session_id, i).unwrap();
+            assert_eq!(fast_tx, serde_tx, "stored tx {} differs between paths", i);
+
+            let fast_dec = fast_map
+                .decrypt_transaction(&fx.session_id, i, &fx.key_secret)
+                .unwrap()
+                .unwrap();
+            let serde_dec = serde_map
+                .decrypt_transaction(&fx.session_id, i, &fx.key_secret)
+                .unwrap()
+                .unwrap();
+            assert_eq!(fast_dec, serde_dec);
+            assert_eq!(fast_dec, fx.plaintext[i as usize]);
+
+            // Meta decrypts identically too.
+            let fast_meta = fast_map
+                .decrypt_transaction_meta(&fx.session_id, i, &fx.key_secret)
+                .unwrap();
+            let serde_meta = serde_map
+                .decrypt_transaction_meta(&fx.session_id, i, &fx.key_secret)
+                .unwrap();
+            assert_eq!(fast_meta, serde_meta);
+            assert!(fast_meta.is_some());
+        }
+    }
+
+    #[test]
+    fn test_mixed_private_and_trusting_batch_falls_back() {
+        use crate::core::keys::{SignerID, SignerSecret};
+        use ed25519_dalek::SigningKey;
+        use rand_core::OsRng;
+
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let signer_id: SignerID = signing_key.verifying_key().into();
+        let signer_secret: SignerSecret = signing_key.into();
+        let key_secret = format!("keySecret_z{}", bs58::encode([7u8; 32]).into_string());
+        let session_id = "co_test_session_zMIXED0000000".to_string();
+
+        let mut producer = create_test_session_map("co_test", TEST_HEADER);
+        producer
+            .make_new_private_transaction(
+                session_id.clone(),
+                signer_secret.0.clone(),
+                r#"["priv"]"#,
+                "key_zTESTKEY".to_string(),
+                key_secret.clone(),
+                None,
+                1,
+            )
+            .unwrap();
+        producer
+            .make_new_trusting_transaction(
+                session_id.clone(),
+                signer_secret.0.clone(),
+                r#"["trust"]"#,
+                None,
+                2,
+            )
+            .unwrap();
+
+        let txs = producer.get_session_transactions(&session_id, 0).unwrap();
+        let signature = producer.get_last_signature(&session_id).unwrap();
+        let batch = format!("[{}]", txs.join(","));
+
+        // A trusting tx in the batch must make the fast scan decline wholesale.
+        assert!(scan_canonical_private_batch(&batch).is_none());
+
+        let mut receiver = create_test_session_map("co_test", TEST_HEADER);
+        receiver
+            .add_transactions(&session_id, Some(&signer_id.0), &batch, &signature, false)
+            .expect("mixed batch must commit via serde fallback");
+
+        assert_eq!(receiver.get_transaction_count(&session_id), Some(2));
+        // Private decrypts, trusting returns its plaintext changes verbatim.
+        assert_eq!(
+            receiver
+                .decrypt_transaction(&session_id, 0, &key_secret)
+                .unwrap()
+                .unwrap(),
+            r#"["priv"]"#
+        );
+        assert_eq!(
+            receiver
+                .decrypt_transaction(&session_id, 1, &key_secret)
+                .unwrap()
+                .unwrap(),
+            r#"["trust"]"#
+        );
+    }
+
+    #[test]
+    fn test_escaped_payload_falls_back_and_rebuilds_canonical() {
+        // An escaped meta value forces the serde fallback, which unescapes then
+        // re-serializes to canonical form. skip_verify=true (no real signature).
+        let mut map = create_test_session_map("co_test", TEST_HEADER);
+        let session_id = "co_test_session_zESCAPED00000";
+        let batch = r#"[{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":1,"meta":"a\"b","privacy":"private"}]"#;
+        assert!(scan_canonical_private_batch(batch).is_none());
+
+        map.add_transactions(session_id, None, batch, "signature_zX", true)
+            .expect("escaped batch must commit via serde fallback with skip_verify");
+
+        // Stored canonical is byte-identical to the input (already canonical for
+        // this escape), proving the fallback rebuilt it correctly.
+        let stored = map.get_transaction(session_id, 0).unwrap();
+        assert_eq!(stored, r#"{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":1,"meta":"a\"b","privacy":"private"}"#);
+    }
+
+    #[test]
+    fn test_leading_zero_madeat_behaves_like_serde_path() {
+        // `01` is non-canonical: the fast scan declines and the serde path
+        // handles it. Behavior must match a batch that is forced onto the serde
+        // path via whitespace framing.
+        let canonical_shape = r#"[{"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":01,"privacy":"private"}]"#;
+        let ws_shape = r#"[ {"encryptedChanges":"encrypted_Uaaa","keyUsed":"key_z1","madeAt":01,"privacy":"private"}]"#;
+
+        let mut a = create_test_session_map("co_test", TEST_HEADER);
+        let mut b = create_test_session_map("co_test", TEST_HEADER);
+        let ra = a.add_transactions("co_test_session_zLZ0", None, canonical_shape, "sig", true);
+        let rb = b.add_transactions("co_test_session_zLZ0", None, ws_shape, "sig", true);
+
+        // Both routes end up in serde; their outcomes must be identical.
+        assert_eq!(ra.is_ok(), rb.is_ok());
+        if ra.is_ok() {
+            assert_eq!(
+                a.get_transaction("co_test_session_zLZ0", 0),
+                b.get_transaction("co_test_session_zLZ0", 0)
+            );
+        }
     }
 }

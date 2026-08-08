@@ -46,7 +46,7 @@ import {
   BranchStartCommit,
 } from "./branching.js";
 import { type RawAccountID } from "../coValues/account.js";
-import { decryptTransactionChangesAndMeta } from "./decryptTransactionChangesAndMeta.js";
+import { batchDecryptTransactionChangesAndMeta } from "./decryptTransactionChangesAndMeta.js";
 import {
   cloneKnownState,
   combineKnownStateSessions,
@@ -1588,8 +1588,11 @@ export class CoValueCore {
     if (!ignorePrivateTransactions) {
       const toDecryptTransactions = this.toDecryptTransactions;
       this.toDecryptTransactions = [];
+      // Decrypt all changes in grouped batches (single FFI call per
+      // session/readKey group) before dispatching, preserving the exact
+      // per-transaction semantics and dispatch order of the previous loop.
+      batchDecryptTransactionChangesAndMeta(this, toDecryptTransactions);
       for (const transaction of toDecryptTransactions) {
-        decryptTransactionChangesAndMeta(this, transaction);
         this.dispatchTransaction(transaction);
       }
     }

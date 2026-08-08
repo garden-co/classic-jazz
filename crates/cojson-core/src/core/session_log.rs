@@ -59,6 +59,139 @@ pub enum Transaction {
     Trusting(TrustingTransaction),
 }
 
+/// Side-table entry describing where the raw encrypted payload(s) live inside a
+/// canonical transaction JSON string, so decryption can slice them directly
+/// instead of re-parsing the whole transaction.
+///
+/// A byte range is `(start, end)` into the canonical tx JSON string, pointing at
+/// the raw string value WITHOUT the surrounding quotes but INCLUDING the
+/// `encrypted_U` prefix. Ranges are only recorded when the value needed no JSON
+/// escaping (so the stored bytes equal the logical string). Anything else falls
+/// back to `NeedsParse`.
+#[derive(Debug, Clone)]
+pub enum TxInfo {
+    /// Private transaction whose payload(s) can be sliced directly.
+    /// `meta` is `Some` only when a meta field is present AND escape-free;
+    /// `None` unambiguously means "no meta field" (an escaped meta would have
+    /// forced the whole entry to `NeedsParse`).
+    Private {
+        changes: (u32, u32),
+        meta: Option<(u32, u32)>,
+    },
+    /// Fall back to parsing the tx JSON (trusting txs, or escaped payloads).
+    NeedsParse,
+}
+
+/// Borrowed mirror of `PrivateTransaction` used purely for canonical
+/// serialization. Field order, renames and `skip_serializing_if` MUST match
+/// `PrivateTransaction` exactly so output is byte-identical.
+#[derive(Serialize)]
+struct PrivateTxRef<'a> {
+    #[serde(rename = "encryptedChanges")]
+    encrypted_changes: &'a str,
+    #[serde(rename = "keyUsed")]
+    key_used: &'a str,
+    #[serde(rename = "madeAt")]
+    made_at: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    meta: Option<&'a str>,
+    privacy: &'static str,
+}
+
+/// Borrowed mirror of `TrustingTransaction` used purely for canonical
+/// serialization (byte-identical to `serde_json::to_string(&TrustingTransaction)`).
+#[derive(Serialize)]
+struct TrustingTxRef<'a> {
+    changes: &'a str,
+    #[serde(rename = "madeAt")]
+    made_at: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    meta: Option<&'a str>,
+    privacy: &'static str,
+}
+
+/// Return true if serializing `s` as a JSON string would require any escaping.
+/// serde_json escapes only control chars (< 0x20), `"` and `\` by default
+/// (non-ASCII bytes and `/` are emitted verbatim), so those are the only bytes
+/// that make a value non-sliceable.
+fn json_needs_escape(s: &str) -> bool {
+    s.bytes().any(|b| b < 0x20 || b == b'"' || b == b'\\')
+}
+
+/// Build the canonical JSON for a private transaction plus its `TxInfo`.
+///
+/// When every string field is escape-free the JSON is hand-built (which is
+/// byte-identical to `serde_json` for escape-free strings) and payload spans are
+/// recorded. Otherwise it falls back to serde serialization and `NeedsParse`.
+fn build_private_canonical(
+    encrypted_changes: &str,
+    key_used: &str,
+    made_at: u64,
+    meta: Option<&str>,
+) -> (String, TxInfo) {
+    let escaped = json_needs_escape(encrypted_changes)
+        || json_needs_escape(key_used)
+        || meta.map(json_needs_escape).unwrap_or(false);
+
+    if escaped {
+        let json = serde_json::to_string(&PrivateTxRef {
+            encrypted_changes,
+            key_used,
+            made_at,
+            meta,
+            privacy: "private",
+        })
+        .expect("private transaction serialization cannot fail");
+        return (json, TxInfo::NeedsParse);
+    }
+
+    use std::fmt::Write as _;
+    let mut s = String::with_capacity(
+        encrypted_changes.len() + key_used.len() + meta.map_or(0, |m| m.len()) + 64,
+    );
+    s.push_str("{\"encryptedChanges\":\"");
+    let changes_start = s.len() as u32;
+    s.push_str(encrypted_changes);
+    let changes_end = s.len() as u32;
+    s.push_str("\",\"keyUsed\":\"");
+    s.push_str(key_used);
+    s.push_str("\",\"madeAt\":");
+    let _ = write!(s, "{}", made_at);
+    let meta_span = if let Some(m) = meta {
+        s.push_str(",\"meta\":\"");
+        let meta_start = s.len() as u32;
+        s.push_str(m);
+        let meta_end = s.len() as u32;
+        s.push('"');
+        Some((meta_start, meta_end))
+    } else {
+        None
+    };
+    s.push_str(",\"privacy\":\"private\"}");
+
+    (
+        s,
+        TxInfo::Private {
+            changes: (changes_start, changes_end),
+            meta: meta_span,
+        },
+    )
+}
+
+/// Build the canonical JSON for a trusting transaction plus its `TxInfo`.
+/// Trusting `changes` are plaintext JSON (usually containing quotes), so this
+/// always serializes via serde and reports `NeedsParse`.
+fn build_trusting_canonical(changes: &str, made_at: u64, meta: Option<&str>) -> (String, TxInfo) {
+    let json = serde_json::to_string(&TrustingTxRef {
+        changes,
+        made_at,
+        meta,
+        privacy: "trusting",
+    })
+    .expect("trusting transaction serialization cannot fail");
+    (json, TxInfo::NeedsParse)
+}
+
 pub enum TransactionMode {
     Private {
         key_id: KeyID,
@@ -72,6 +205,12 @@ pub struct SessionLogInternal {
     public_key: Option<VerifyingKey>,
     hasher: blake3::Hasher,
     transactions_json: Vec<String>,
+    /// Payload span side-table, index-aligned with `transactions_json`.
+    /// Entry `i` describes where the raw encrypted payload(s) of transaction `i`
+    /// live inside `transactions_json[i]` (or `NeedsParse`). May be shorter than
+    /// `transactions_json` if a caller pushed raw JSON directly (tests); a
+    /// missing entry is treated as `NeedsParse`.
+    tx_infos: Vec<TxInfo>,
     last_signature: Option<Signature>,
     nonce_generator: NonceGenerator,
     crypto_cache: CryptoCache,
@@ -79,6 +218,8 @@ pub struct SessionLogInternal {
     /// Transactions are added here via add_existing_* methods and committed
     /// to the main state only when commit_transactions() succeeds.
     pending_transactions: Vec<String>,
+    /// Span side-table for `pending_transactions`, index-aligned with it.
+    pending_tx_infos: Vec<TxInfo>,
     /// In-between signatures at specific transaction indices
     /// Used for chunking large sessions in sync messages
     signature_after: HashMap<u32, String>,
@@ -118,10 +259,12 @@ impl SessionLogInternal {
             public_key,
             hasher,
             transactions_json: Vec::new(),
+            tx_infos: Vec::new(),
             last_signature: None,
             nonce_generator: NonceGenerator::new(co_id, session_id),
             crypto_cache: CryptoCache::new(),
             pending_transactions: Vec::new(),
+            pending_tx_infos: Vec::new(),
             signature_after: HashMap::new(),
             tx_size_since_last_inbetween_signature: 0,
         }
@@ -158,8 +301,9 @@ impl SessionLogInternal {
         meta: Option<String>,
     ) -> Result<(Signature, Transaction), CoJsonCoreError> {
         validate_tx_size_limit_in_bytes(changes_json)?;
-        // Build the transaction object depending on the mode.
-        let new_tx = match mode {
+        // Build the transaction object (for the return value) plus the canonical
+        // JSON string and its payload span info (for storage + fast decrypt).
+        let (new_tx, tx_json, tx_info) = match mode {
             TransactionMode::Private { key_id, key_secret } => {
                 // For private transactions, encrypt the changes and meta fields.
                 let tx_index = self.transactions_json.len() as u32;
@@ -182,41 +326,55 @@ impl SessionLogInternal {
                     let mut cipher = XSalsa20::new(&key, &nonce.into());
                     cipher.apply_keystream(&mut ciphertext);
 
-                    let encrypted_meta = format!("encrypted_U{}", URL_SAFE.encode(&ciphertext));
-
-                    Encrypted {
-                        value: encrypted_meta,
-                        _phantom: std::marker::PhantomData,
-                    }
+                    format!("encrypted_U{}", URL_SAFE.encode(&ciphertext))
                 });
 
-                // Build the private transaction.
-                Transaction::Private(PrivateTransaction {
+                // Build the canonical JSON + spans (byte-identical to serializing
+                // the PrivateTransaction below).
+                let (tx_json, tx_info) = build_private_canonical(
+                    &encrypted_str,
+                    &key_id.0,
+                    made_at,
+                    encrypted_meta.as_deref(),
+                );
+
+                // Build the private transaction (returned to the caller).
+                let new_tx = Transaction::Private(PrivateTransaction {
                     encrypted_changes: Encrypted {
                         value: encrypted_str,
                         _phantom: std::marker::PhantomData,
                     },
                     key_used: key_id.clone(),
                     made_at: Number::from(made_at),
-                    meta: encrypted_meta,
+                    meta: encrypted_meta.map(|value| Encrypted {
+                        value,
+                        _phantom: std::marker::PhantomData,
+                    }),
                     privacy: "private".to_string(),
-                })
+                });
+
+                (new_tx, tx_json, tx_info)
             }
             TransactionMode::Trusting => {
                 // For trusting transactions, just store the changes as plain text.
-                Transaction::Trusting(TrustingTransaction {
+                let (tx_json, tx_info) =
+                    build_trusting_canonical(changes_json, made_at, meta.as_deref());
+
+                let new_tx = Transaction::Trusting(TrustingTransaction {
                     changes: changes_json.to_string(),
                     made_at: Number::from(made_at),
                     meta,
                     privacy: "trusting".to_string(),
-                })
+                });
+
+                (new_tx, tx_json, tx_info)
             }
         };
 
-        // Serialize the transaction to JSON and update the hash state.
-        let tx_json = serde_json::to_string(&new_tx).unwrap();
+        // Update the hash state with the canonical JSON and store it.
         self.hasher.update(tx_json.as_bytes());
         self.transactions_json.push(tx_json);
+        self.tx_infos.push(tx_info);
 
         // Compute the new hash and sign it.
         let new_hash = self.hasher.finalize();
@@ -235,87 +393,41 @@ impl SessionLogInternal {
         Ok((new_signature, new_tx))
     }
 
-    /// Add an existing private transaction to the staging area.
+    /// Stage a private transaction from borrowed inputs (no big owned
+    /// allocations beyond the canonical JSON we must store anyway).
     /// The transaction is NOT committed until commit_transactions() succeeds.
-    /// Used for batch loading where signature is validated at the end.
-    ///
-    /// # Arguments
-    /// * `encrypted_changes` - The encrypted changes string (e.g., "encrypted_U...")
-    /// * `key_used` - The key ID used for encryption
-    /// * `made_at` - Timestamp in milliseconds
-    /// * `meta` - Optional encrypted metadata
-    ///
-    /// # Errors
-    /// Returns `CoJsonCoreError::Json` if serialization fails (clears pending transactions).
-    pub fn add_existing_private_transaction(
+    pub fn stage_existing_private(
         &mut self,
-        encrypted_changes: String,
-        key_used: String,
+        encrypted_changes: &str,
+        key_used: &str,
         made_at: u64,
-        meta: Option<String>,
-    ) -> Result<(), CoJsonCoreError> {
-        let tx = Transaction::Private(PrivateTransaction {
-            encrypted_changes: Encrypted {
-                value: encrypted_changes,
-                _phantom: std::marker::PhantomData,
-            },
-            key_used: KeyID(key_used),
-            made_at: Number::from(made_at),
-            meta: meta.map(|m| Encrypted {
-                value: m,
-                _phantom: std::marker::PhantomData,
-            }),
-            privacy: "private".to_string(),
-        });
-
-        // Handle serialization error - clear pending and propagate
-        let tx_json = match serde_json::to_string(&tx) {
-            Ok(json) => json,
-            Err(e) => {
-                self.pending_transactions.clear();
-                return Err(CoJsonCoreError::Json(e));
-            }
-        };
-
+        meta: Option<&str>,
+    ) {
+        let (tx_json, tx_info) =
+            build_private_canonical(encrypted_changes, key_used, made_at, meta);
         self.pending_transactions.push(tx_json);
-        Ok(())
+        self.pending_tx_infos.push(tx_info);
     }
 
-    /// Add an existing trusting transaction to the staging area.
+    /// Stage a trusting transaction from borrowed inputs.
     /// The transaction is NOT committed until commit_transactions() succeeds.
-    /// Used for batch loading where signature is validated at the end.
-    ///
-    /// # Arguments
-    /// * `changes` - The stringified JSON changes
-    /// * `made_at` - Timestamp in milliseconds
-    /// * `meta` - Optional metadata
-    ///
-    /// # Errors
-    /// Returns `CoJsonCoreError::Json` if serialization fails (clears pending transactions).
-    pub fn add_existing_trusting_transaction(
-        &mut self,
-        changes: String,
-        made_at: u64,
-        meta: Option<String>,
-    ) -> Result<(), CoJsonCoreError> {
-        let tx = Transaction::Trusting(TrustingTransaction {
-            changes,
-            made_at: Number::from(made_at),
-            meta,
-            privacy: "trusting".to_string(),
-        });
-
-        // Handle serialization error - clear pending and propagate
-        let tx_json = match serde_json::to_string(&tx) {
-            Ok(json) => json,
-            Err(e) => {
-                self.pending_transactions.clear();
-                return Err(CoJsonCoreError::Json(e));
-            }
-        };
-
+    pub fn stage_existing_trusting(&mut self, changes: &str, made_at: u64, meta: Option<&str>) {
+        let (tx_json, tx_info) = build_trusting_canonical(changes, made_at, meta);
         self.pending_transactions.push(tx_json);
-        Ok(())
+        self.pending_tx_infos.push(tx_info);
+    }
+
+    /// Stage an already-canonical transaction directly.
+    ///
+    /// `tx_json` MUST be the exact canonical serialization of the transaction
+    /// (byte-identical to what `build_private_canonical`/`build_trusting_canonical`
+    /// would produce) and `tx_info` its matching payload span table (spans
+    /// relative to the start of `tx_json`). Used by the canonical-shape fast
+    /// scan import path to avoid re-serializing already-canonical input.
+    /// The transaction is NOT committed until commit_transactions() succeeds.
+    pub fn stage_canonical(&mut self, tx_json: String, tx_info: TxInfo) {
+        self.pending_transactions.push(tx_json);
+        self.pending_tx_infos.push(tx_info);
     }
 
     /// Commit pending transactions to the main state.
@@ -370,9 +482,11 @@ impl SessionLogInternal {
             self.hasher = hasher;
         }
 
-        // Add new transactions to the session log.
+        // Add new transactions to the session log (keep the span side-table
+        // index-aligned with transactions_json).
         self.transactions_json
             .extend(self.pending_transactions.drain(..));
+        self.tx_infos.extend(self.pending_tx_infos.drain(..));
 
         // Update the last signature.
         self.last_signature = Some(new_signature.clone());
@@ -397,34 +511,55 @@ impl SessionLogInternal {
             .transactions_json
             .get(tx_index as usize)
             .ok_or(CoJsonCoreError::TransactionNotFound(tx_index))?;
+
+        // Fast path: slice the encrypted payload directly out of the stored
+        // canonical JSON, skipping the serde parse entirely.
+        if let Some(TxInfo::Private {
+            changes: (start, end),
+            ..
+        }) = self.tx_infos.get(tx_index as usize)
+        {
+            let encrypted_val = &tx_json[*start as usize..*end as usize];
+            return self.decrypt_encrypted_value(tx_index, encrypted_val, &key_secret);
+        }
+
+        // Fallback: parse the transaction JSON.
         let tx: Transaction = serde_json::from_str(tx_json)?;
 
         match tx {
             Transaction::Private(private_tx) => {
-                // For private transactions, decrypt the encrypted_changes field.
-                let nonce = self.nonce_generator.get_nonce(tx_index);
-
-                let encrypted_val = private_tx.encrypted_changes.value;
-                let prefix = "encrypted_U";
-                if !encrypted_val.starts_with(prefix) {
-                    return Err(CoJsonCoreError::InvalidEncryptedPrefix);
-                }
-
-                // Decode the base64-encoded ciphertext.
-                let ciphertext_b64 = &encrypted_val[prefix.len()..];
-                let mut ciphertext = URL_SAFE.decode(ciphertext_b64)?;
-
-                // Decrypt using XSalsa20.
-                let key = self.crypto_cache.get_xsalsa20_key(&key_secret)?;
-
-                let mut cipher = XSalsa20::new(&key, &nonce.into());
-                cipher.apply_keystream(&mut ciphertext);
-
-                Ok(String::from_utf8(ciphertext)?)
+                self.decrypt_encrypted_value(tx_index, &private_tx.encrypted_changes.value, &key_secret)
             }
             // For trusting transactions, just return the plain changes.
             Transaction::Trusting(trusting_tx) => Ok(trusting_tx.changes),
         }
+    }
+
+    /// Decode + XSalsa20-decrypt an `encrypted_U`-prefixed value using the
+    /// nonce for `tx_index`. Shared by the fast (sliced) and fallback (parsed)
+    /// decryption paths.
+    fn decrypt_encrypted_value(
+        &self,
+        tx_index: u32,
+        encrypted_val: &str,
+        key_secret: &KeySecret,
+    ) -> Result<String, CoJsonCoreError> {
+        let prefix = "encrypted_U";
+        if !encrypted_val.starts_with(prefix) {
+            return Err(CoJsonCoreError::InvalidEncryptedPrefix);
+        }
+
+        // Decode the base64-encoded ciphertext.
+        let ciphertext_b64 = &encrypted_val[prefix.len()..];
+        let mut ciphertext = URL_SAFE.decode(ciphertext_b64)?;
+
+        // Decrypt using XSalsa20.
+        let nonce = self.nonce_generator.get_nonce(tx_index);
+        let key = self.crypto_cache.get_xsalsa20_key(key_secret)?;
+        let mut cipher = XSalsa20::new(&key, &nonce.into());
+        cipher.apply_keystream(&mut ciphertext);
+
+        Ok(String::from_utf8(ciphertext)?)
     }
 
     /// Decrypt the meta JSON for the transaction at the given index, if present.
@@ -439,30 +574,36 @@ impl SessionLogInternal {
             .transactions_json
             .get(tx_index as usize)
             .ok_or(CoJsonCoreError::TransactionNotFound(tx_index))?;
+
+        // Fast path: the span side-table tells us exactly whether a (sliceable)
+        // meta payload exists, without parsing.
+        if let Some(TxInfo::Private { meta, .. }) = self.tx_infos.get(tx_index as usize) {
+            return match meta {
+                Some((start, end)) => {
+                    let encrypted_val = &tx_json[*start as usize..*end as usize];
+                    Ok(Some(self.decrypt_encrypted_value(
+                        tx_index,
+                        encrypted_val,
+                        &key_secret,
+                    )?))
+                }
+                // Private + escape-free with no meta span ⇒ definitively no meta.
+                None => Ok(None),
+            };
+        }
+
+        // Fallback: parse the transaction JSON.
         let tx: Transaction = serde_json::from_str(tx_json)?;
 
         match tx {
             Transaction::Private(private_tx) => {
                 // If meta is present, decrypt it.
                 if let Some(encrypted_meta) = private_tx.meta {
-                    let nonce = self.nonce_generator.get_nonce(tx_index);
-
-                    let encrypted_val = encrypted_meta.value;
-                    let prefix = "encrypted_U";
-                    if !encrypted_val.starts_with(prefix) {
-                        return Err(CoJsonCoreError::InvalidEncryptedPrefix);
-                    }
-
-                    // Decode the base64-encoded ciphertext.
-                    let ciphertext_b64 = &encrypted_val[prefix.len()..];
-                    let mut ciphertext = URL_SAFE.decode(ciphertext_b64)?;
-
-                    // Decrypt using XSalsa20.
-                    let key: Key<XSalsa20> = self.crypto_cache.get_xsalsa20_key(&key_secret)?;
-                    let mut cipher = XSalsa20::new(&key, &nonce.into());
-                    cipher.apply_keystream(&mut ciphertext);
-
-                    Ok(Some(String::from_utf8(ciphertext)?))
+                    Ok(Some(self.decrypt_encrypted_value(
+                        tx_index,
+                        &encrypted_meta.value,
+                        &key_secret,
+                    )?))
                 } else {
                     Ok(None)
                 }
@@ -557,8 +698,7 @@ mod tests {
 
         // Stage a trusting transaction
         session
-            .add_existing_trusting_transaction(r#"{"test": "data"}"#.to_string(), 1234567890, None)
-            .unwrap();
+            .stage_existing_trusting(r#"{"test": "data"}"#, 1234567890, None);
 
         assert!(session.has_pending());
         assert_eq!(session.transactions_json.len(), 0);
@@ -595,8 +735,7 @@ mod tests {
 
         // Stage a trusting transaction
         session
-            .add_existing_trusting_transaction(r#"{"test": "data"}"#.to_string(), 1234567890, None)
-            .unwrap();
+            .stage_existing_trusting(r#"{"test": "data"}"#, 1234567890, None);
 
         // Create a wrong signature
         let wrong_signing_key = SigningKey::generate(&mut csprng);
@@ -629,8 +768,7 @@ mod tests {
 
         // Stage a trusting transaction
         session
-            .add_existing_trusting_transaction(r#"{"test": "data"}"#.to_string(), 1234567890, None)
-            .unwrap();
+            .stage_existing_trusting(r#"{"test": "data"}"#, 1234567890, None);
 
         // Use a completely wrong signature but skip validation
         let wrong_signature: Signature = signing_key.sign(b"completely wrong data").into();
@@ -655,8 +793,7 @@ mod tests {
 
         // Stage a trusting transaction
         session
-            .add_existing_trusting_transaction(r#"{"test": "data"}"#.to_string(), 1234567890, None)
-            .unwrap();
+            .stage_existing_trusting(r#"{"test": "data"}"#, 1234567890, None);
 
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
@@ -684,11 +821,9 @@ mod tests {
 
         // Stage multiple transactions
         session
-            .add_existing_trusting_transaction(r#"{"test": "data1"}"#.to_string(), 1234567890, None)
-            .unwrap();
+            .stage_existing_trusting(r#"{"test": "data1"}"#, 1234567890, None);
         session
-            .add_existing_trusting_transaction(r#"{"test": "data2"}"#.to_string(), 1234567891, None)
-            .unwrap();
+            .stage_existing_trusting(r#"{"test": "data2"}"#, 1234567891, None);
 
         assert_eq!(session.pending_transactions.len(), 2);
 
@@ -710,7 +845,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_existing_private_transaction() {
+    fn test_stage_existing_private() {
         let mut session = SessionLogInternal::new(
             CoID("co_test".to_string()),
             SessionID("session_test".to_string()),
@@ -718,14 +853,8 @@ mod tests {
         );
 
         // Stage a private transaction
-        let result = session.add_existing_private_transaction(
-            "encrypted_Utest_data".to_string(),
-            "test_key_id".to_string(),
-            1234567890,
-            None,
-        );
+        session.stage_existing_private("encrypted_Utest_data", "test_key_id", 1234567890, None);
 
-        assert!(result.is_ok());
         assert!(session.has_pending());
         assert_eq!(session.pending_transactions.len(), 1);
 
@@ -744,7 +873,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_existing_trusting_transaction() {
+    fn test_stage_existing_trusting() {
         let mut session = SessionLogInternal::new(
             CoID("co_test".to_string()),
             SessionID("session_test".to_string()),
@@ -752,13 +881,12 @@ mod tests {
         );
 
         // Stage a trusting transaction with meta
-        let result = session.add_existing_trusting_transaction(
-            r#"{"test": "data"}"#.to_string(),
+        session.stage_existing_trusting(
+            r#"{"test": "data"}"#,
             1234567890,
-            Some(r#"{"meta": "test"}"#.to_string()),
+            Some(r#"{"meta": "test"}"#),
         );
 
-        assert!(result.is_ok());
         assert!(session.has_pending());
         assert_eq!(session.pending_transactions.len(), 1);
 
@@ -887,13 +1015,12 @@ mod tests {
         match created_tx {
             Transaction::Private(tx) => {
                 session2
-                    .add_existing_private_transaction(
-                        tx.encrypted_changes.value,
-                        tx.key_used.0,
+                    .stage_existing_private(
+                        &tx.encrypted_changes.value,
+                        &tx.key_used.0,
                         tx.made_at.as_u64().unwrap(),
-                        tx.meta.map(|m| m.value),
-                    )
-                    .unwrap();
+                        tx.meta.as_ref().map(|m| m.value.as_str()),
+                        );
             }
             _ => panic!("Expected PrivateTransaction"),
         }
@@ -947,22 +1074,16 @@ mod tests {
             match tx {
                 Transaction::Private(ptx) => {
                     session
-                        .add_existing_private_transaction(
-                            ptx.encrypted_changes.value,
-                            ptx.key_used.0,
+                        .stage_existing_private(
+                            &ptx.encrypted_changes.value,
+                            &ptx.key_used.0,
                             ptx.made_at.as_u64().unwrap(),
-                            ptx.meta.map(|m| m.value),
-                        )
-                        .unwrap();
+                            ptx.meta.as_ref().map(|m| m.value.as_str()),
+                            );
                 }
                 Transaction::Trusting(ttx) => {
                     session
-                        .add_existing_trusting_transaction(
-                            ttx.changes,
-                            ttx.made_at.as_u64().unwrap(),
-                            ttx.meta,
-                        )
-                        .unwrap();
+                        .stage_existing_trusting(&ttx.changes, ttx.made_at.as_u64().unwrap(), ttx.meta.as_deref());
                 }
             }
         }
@@ -1025,22 +1146,16 @@ mod tests {
             match tx {
                 Transaction::Private(ptx) => {
                     session
-                        .add_existing_private_transaction(
-                            ptx.encrypted_changes.value,
-                            ptx.key_used.0,
+                        .stage_existing_private(
+                            &ptx.encrypted_changes.value,
+                            &ptx.key_used.0,
                             ptx.made_at.as_u64().unwrap(),
-                            ptx.meta.map(|m| m.value),
-                        )
-                        .unwrap();
+                            ptx.meta.as_ref().map(|m| m.value.as_str()),
+                            );
                 }
                 Transaction::Trusting(ttx) => {
                     session
-                        .add_existing_trusting_transaction(
-                            ttx.changes,
-                            ttx.made_at.as_u64().unwrap(),
-                            ttx.meta,
-                        )
-                        .unwrap();
+                        .stage_existing_trusting(&ttx.changes, ttx.made_at.as_u64().unwrap(), ttx.meta.as_deref());
                 }
             }
         }
@@ -1134,13 +1249,12 @@ mod tests {
         match created_tx {
             Transaction::Private(tx) => {
                 session2
-                    .add_existing_private_transaction(
-                        tx.encrypted_changes.value,
-                        tx.key_used.0,
+                    .stage_existing_private(
+                        &tx.encrypted_changes.value,
+                        &tx.key_used.0,
                         tx.made_at.as_u64().unwrap(),
-                        tx.meta.map(|m| m.value),
-                    )
-                    .unwrap();
+                        tx.meta.as_ref().map(|m| m.value.as_str()),
+                        );
             }
             _ => panic!("Expected PrivateTransaction"),
         }
@@ -1523,11 +1637,9 @@ mod tests {
 
         // Add multiple transactions using direct calls
         test_session
-            .add_existing_trusting_transaction(r#"{"test":"data1"}"#.to_string(), 1234567890, None)
-            .unwrap();
+            .stage_existing_trusting(r#"{"test":"data1"}"#, 1234567890, None);
         test_session
-            .add_existing_trusting_transaction(r#"{"test":"data2"}"#.to_string(), 1234567890, None)
-            .unwrap();
+            .stage_existing_trusting(r#"{"test":"data2"}"#, 1234567890, None);
 
         let signature: Signature = SigningKey::generate(&mut OsRng).sign(b"test").into();
 
@@ -1600,5 +1712,176 @@ mod tests {
         let serialized = serde_json::to_string(&trusting_tx).unwrap();
         assert!(serialized.contains("\"privacy\":\"trusting\""));
         assert!(serialized.contains("\"changes\":\"{\\\"test\\\": \\\"data\\\"}\""));
+    }
+
+    // ========================================================================
+    // Canonical serialization byte-identity + span tests
+    // ========================================================================
+
+    /// Old-types serialization used as the byte-identity oracle.
+    fn oracle_private(
+        encrypted_changes: &str,
+        key_used: &str,
+        made_at: u64,
+        meta: Option<&str>,
+    ) -> String {
+        serde_json::to_string(&Transaction::Private(PrivateTransaction {
+            encrypted_changes: Encrypted {
+                value: encrypted_changes.to_string(),
+                _phantom: std::marker::PhantomData,
+            },
+            key_used: KeyID(key_used.to_string()),
+            made_at: Number::from(made_at),
+            meta: meta.map(|m| Encrypted {
+                value: m.to_string(),
+                _phantom: std::marker::PhantomData,
+            }),
+            privacy: "private".to_string(),
+        }))
+        .unwrap()
+    }
+
+    fn oracle_trusting(changes: &str, made_at: u64, meta: Option<&str>) -> String {
+        serde_json::to_string(&Transaction::Trusting(TrustingTransaction {
+            changes: changes.to_string(),
+            made_at: Number::from(made_at),
+            meta: meta.map(|m| m.to_string()),
+            privacy: "trusting".to_string(),
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn test_canonical_private_byte_identity() {
+        let cases: &[(&str, &str, u64, Option<&str>)] = &[
+            // No meta, base64url payload (escape-free -> fast path)
+            (
+                "encrypted_UabcDEF-_123",
+                "key_z11111111111111111111111111111111",
+                1234567890,
+                None,
+            ),
+            // With meta (both escape-free)
+            (
+                "encrypted_UabcDEF-_123",
+                "key_z22222222222222222222222222222222",
+                42,
+                Some("encrypted_UzzzYYY-_999"),
+            ),
+            // Non-ASCII in value: serde does NOT escape it, so it stays sliceable
+            (
+                "encrypted_Ucafé_ünïcode",
+                "key_zabc",
+                0,
+                Some("encrypted_Uméta"),
+            ),
+            // Escaping required in changes -> must fall back to NeedsParse
+            (
+                "encrypted_U\"quote\\backslash",
+                "key_zabc",
+                7,
+                None,
+            ),
+            // Escaping required only in meta -> whole tx falls back
+            (
+                "encrypted_Uclean",
+                "key_zabc",
+                7,
+                Some("encrypted_U\"escaped\""),
+            ),
+            // Escaping required in keyUsed -> whole tx falls back
+            (
+                "encrypted_Uclean",
+                "key_\"weird\"",
+                7,
+                Some("encrypted_Uclean_meta"),
+            ),
+        ];
+
+        for (ec, ku, made_at, meta) in cases.iter().copied() {
+            let (json, info) = build_private_canonical(ec, ku, made_at, meta);
+            let expected = oracle_private(ec, ku, made_at, meta);
+            assert_eq!(json, expected, "byte mismatch for private tx {:?}", ec);
+
+            let needs_escape =
+                json_needs_escape(ec) || json_needs_escape(ku) || meta.map_or(false, json_needs_escape);
+            match info {
+                TxInfo::Private { changes, meta: mspan } => {
+                    assert!(!needs_escape, "expected NeedsParse for escaped input {:?}", ec);
+                    // Sliced changes value equals the logical value.
+                    assert_eq!(&json[changes.0 as usize..changes.1 as usize], ec);
+                    match (mspan, meta) {
+                        (Some(span), Some(m)) => {
+                            assert_eq!(&json[span.0 as usize..span.1 as usize], m);
+                        }
+                        (None, None) => {}
+                        _ => panic!("meta span presence mismatch for {:?}", ec),
+                    }
+                }
+                TxInfo::NeedsParse => {
+                    assert!(needs_escape, "unexpected NeedsParse for clean input {:?}", ec);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_canonical_trusting_byte_identity() {
+        let cases: &[(&str, u64, Option<&str>)] = &[
+            (r#"[{"op":"app","value":"x"}]"#, 1234567890, None),
+            (r#"[]"#, 0, Some(r#"{"m":"é"}"#)),
+        ];
+        for (ch, made_at, meta) in cases.iter().copied() {
+            let (json, info) = build_trusting_canonical(ch, made_at, meta);
+            let expected = oracle_trusting(ch, made_at, meta);
+            assert_eq!(json, expected, "byte mismatch for trusting tx {:?}", ch);
+            assert!(matches!(info, TxInfo::NeedsParse));
+        }
+    }
+
+    #[test]
+    fn test_escaped_private_payload_falls_back_to_needs_parse_and_still_decrypts() {
+        // Build a real encrypted private tx, then decrypt via both the fast path
+        // (clean payload) and confirm the fallback path is exercised when the
+        // side-table entry is NeedsParse.
+        let mut csprng = OsRng;
+        let signing_key = SigningKey::generate(&mut csprng);
+        let public_key = signing_key.verifying_key();
+        let key_bytes = [7u8; 32];
+        let key_secret = KeySecret(format!("key_z{}", bs58::encode(key_bytes).into_string()));
+        let key_id = KeyID("key_zabc".to_string());
+
+        let mut session = SessionLogInternal::new(
+            CoID("co_test".to_string()),
+            SessionID("session_test".to_string()),
+            Some(public_key.into()),
+        );
+        let changes = r#"[{"op":"app","value":"hello"}]"#;
+        session
+            .add_new_transaction(
+                changes,
+                TransactionMode::Private {
+                    key_id,
+                    key_secret: key_secret.clone(),
+                },
+                &signing_key.into(),
+                123,
+                None,
+            )
+            .unwrap();
+
+        // Fast path (side table has spans).
+        let fast = session
+            .decrypt_next_transaction_changes_json(0, key_secret.clone())
+            .unwrap();
+        assert_eq!(fast, changes);
+
+        // Now corrupt the side table to force the parse fallback and ensure it
+        // still decrypts to the same plaintext.
+        session.tx_infos[0] = TxInfo::NeedsParse;
+        let slow = session
+            .decrypt_next_transaction_changes_json(0, key_secret)
+            .unwrap();
+        assert_eq!(slow, changes);
     }
 }

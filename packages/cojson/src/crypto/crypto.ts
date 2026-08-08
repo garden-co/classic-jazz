@@ -387,4 +387,22 @@ export interface SessionMapImpl {
     txIndex: number,
     keySecret: string,
   ): string | undefined;
+
+  /**
+   * Batch fast path for decrypting several private transactions in a single
+   * native call. Optional: older/other native implementations (napi, RN, or an
+   * outdated prebuilt wasm binary) won't expose it, and callers must fall back
+   * to per-transaction `decryptTransaction`.
+   *
+   * Returns a JSON array string where element i corresponds to indices[i]:
+   * either the decrypted changes (a JSON array value) or `null` if that
+   * transaction couldn't be decrypted. Returns `undefined` if the session
+   * doesn't exist. The combined string may fail to JSON.parse if a decrypted
+   * plaintext was corrupt, so callers must catch and fall back.
+   */
+  decryptTransactions?(
+    sessionID: string,
+    indices: Uint32Array,
+    keySecret: string,
+  ): string | undefined;
 }

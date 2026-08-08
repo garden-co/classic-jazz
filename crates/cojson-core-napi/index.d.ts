@@ -59,6 +59,12 @@ export declare class SessionMap {
   decryptTransaction(sessionId: string, txIndex: number, keySecret: string): string | null
   /** Decrypt transaction meta */
   decryptTransactionMeta(sessionId: string, txIndex: number, keySecret: string): string | null
+  /**
+   * Decrypt many transactions in one call. Returns a JSON array string
+   * (element `i` is the decrypted changes of `indices[i]`, or `null` if that
+   * tx could not be decrypted), or `undefined` if the session does not exist.
+   */
+  decryptTransactions(sessionId: string, indices: Array<number>, keySecret: string): string | null
 }
 
 /**

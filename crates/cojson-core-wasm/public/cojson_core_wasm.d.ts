@@ -2,6 +2,63 @@
 /* eslint-disable */
 export function init(): void;
 /**
+ * WASM-exposed function to verify an Ed25519 signature.
+ * - `verifying_key`: 32 bytes of verifying key material
+ * - `message`: Raw bytes that were signed
+ * - `signature`: 64 bytes of signature material
+ * Returns true if signature is valid, false otherwise, or throws JsError if verification fails.
+ */
+export function ed25519Verify(verifying_key: Uint8Array, message: Uint8Array, signature: Uint8Array): boolean;
+/**
+ * WASM-exposed function to sign a message with an Ed25519 signing key.
+ * - `signing_key`: 32 bytes of signing key material
+ * - `message`: Raw bytes to sign
+ * Returns 64 bytes of signature material or throws JsError if signing fails.
+ */
+export function ed25519SigningKeySign(signing_key: Uint8Array, message: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to validate and copy Ed25519 signing key bytes.
+ * - `bytes`: 32 bytes of signing key material to validate
+ * Returns the same 32 bytes if valid or throws JsError if invalid.
+ */
+export function ed25519SigningKeyFromBytes(bytes: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to sign a message using Ed25519.
+ * - `signing_key`: 32 bytes of signing key material
+ * - `message`: Raw bytes to sign
+ * Returns 64 bytes of signature material or throws JsError if signing fails.
+ */
+export function ed25519Sign(signing_key: Uint8Array, message: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to validate and copy Ed25519 signature bytes.
+ * - `bytes`: 64 bytes of signature material to validate
+ * Returns the same 64 bytes if valid or throws JsError if invalid.
+ */
+export function ed25519SignatureFromBytes(bytes: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to validate and copy Ed25519 verifying key bytes.
+ * - `bytes`: 32 bytes of verifying key material to validate
+ * Returns the same 32 bytes if valid or throws JsError if invalid.
+ */
+export function ed25519VerifyingKeyFromBytes(bytes: Uint8Array): Uint8Array;
+/**
+ * Generate a new Ed25519 signing key using secure random number generation.
+ * Returns 32 bytes of raw key material suitable for use with other Ed25519 functions.
+ */
+export function newEd25519SigningKey(): Uint8Array;
+/**
+ * WASM-exposed function to derive the public key from an Ed25519 signing key.
+ * - `signing_key`: 32 bytes of signing key material
+ * Returns 32 bytes of public key material or throws JsError if key is invalid.
+ */
+export function ed25519SigningKeyToPublic(signing_key: Uint8Array): Uint8Array;
+/**
+ * WASM-exposed function to derive an Ed25519 verifying key from a signing key.
+ * - `signing_key`: 32 bytes of signing key material
+ * Returns 32 bytes of verifying key material or throws JsError if key is invalid.
+ */
+export function ed25519VerifyingKey(signing_key: Uint8Array): Uint8Array;
+/**
  * WASM-exposed function for unsealing a message using X25519 + XSalsa20-Poly1305.
  * Provides authenticated decryption with perfect forward secrecy.
  * - `sealed_message`: The sealed bytes to decrypt
@@ -147,63 +204,6 @@ export function shortHash(value: string): string;
  * This is useful for domain separation - the same data hashed with different contexts will produce different outputs.
  */
 export function blake3HashOnceWithContext(data: Uint8Array, context: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to verify an Ed25519 signature.
- * - `verifying_key`: 32 bytes of verifying key material
- * - `message`: Raw bytes that were signed
- * - `signature`: 64 bytes of signature material
- * Returns true if signature is valid, false otherwise, or throws JsError if verification fails.
- */
-export function ed25519Verify(verifying_key: Uint8Array, message: Uint8Array, signature: Uint8Array): boolean;
-/**
- * WASM-exposed function to sign a message with an Ed25519 signing key.
- * - `signing_key`: 32 bytes of signing key material
- * - `message`: Raw bytes to sign
- * Returns 64 bytes of signature material or throws JsError if signing fails.
- */
-export function ed25519SigningKeySign(signing_key: Uint8Array, message: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to validate and copy Ed25519 signing key bytes.
- * - `bytes`: 32 bytes of signing key material to validate
- * Returns the same 32 bytes if valid or throws JsError if invalid.
- */
-export function ed25519SigningKeyFromBytes(bytes: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to sign a message using Ed25519.
- * - `signing_key`: 32 bytes of signing key material
- * - `message`: Raw bytes to sign
- * Returns 64 bytes of signature material or throws JsError if signing fails.
- */
-export function ed25519Sign(signing_key: Uint8Array, message: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to validate and copy Ed25519 signature bytes.
- * - `bytes`: 64 bytes of signature material to validate
- * Returns the same 64 bytes if valid or throws JsError if invalid.
- */
-export function ed25519SignatureFromBytes(bytes: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to validate and copy Ed25519 verifying key bytes.
- * - `bytes`: 32 bytes of verifying key material to validate
- * Returns the same 32 bytes if valid or throws JsError if invalid.
- */
-export function ed25519VerifyingKeyFromBytes(bytes: Uint8Array): Uint8Array;
-/**
- * Generate a new Ed25519 signing key using secure random number generation.
- * Returns 32 bytes of raw key material suitable for use with other Ed25519 functions.
- */
-export function newEd25519SigningKey(): Uint8Array;
-/**
- * WASM-exposed function to derive the public key from an Ed25519 signing key.
- * - `signing_key`: 32 bytes of signing key material
- * Returns 32 bytes of public key material or throws JsError if key is invalid.
- */
-export function ed25519SigningKeyToPublic(signing_key: Uint8Array): Uint8Array;
-/**
- * WASM-exposed function to derive an Ed25519 verifying key from a signing key.
- * - `signing_key`: 32 bytes of signing key material
- * Returns 32 bytes of verifying key material or throws JsError if key is invalid.
- */
-export function ed25519VerifyingKey(signing_key: Uint8Array): Uint8Array;
 export class Blake3Hasher {
   free(): void;
   constructor();
@@ -258,6 +258,13 @@ export class SessionMap {
    */
   getSignatureAfter(session_id: string, tx_index: number): string | undefined;
   /**
+   * Decrypt many transactions in one call. `indices` is a `Uint32Array`.
+   * Returns a JSON array string (element `i` is the decrypted changes of
+   * `indices[i]`, or `null` if that tx could not be decrypted), or
+   * `undefined` if the session does not exist.
+   */
+  decryptTransactions(session_id: string, indices: Uint32Array, key_secret: string): string | undefined;
+  /**
    * Get transaction count for a session (returns -1 if session not found)
    */
   getTransactionCount(session_id: string): number;
@@ -310,6 +317,7 @@ export interface InitOutput {
   readonly sessionmap_addTransactions: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number];
   readonly sessionmap_decryptTransaction: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
   readonly sessionmap_decryptTransactionMeta: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+  readonly sessionmap_decryptTransactions: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
   readonly sessionmap_getHeader: (a: number) => [number, number];
   readonly sessionmap_getKnownState: (a: number) => any;
   readonly sessionmap_getKnownStateWithStreaming: (a: number) => any;
@@ -328,6 +336,15 @@ export interface InitOutput {
   readonly sessionmap_new: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
   readonly sessionmap_setStreamingKnownState: (a: number, b: number, c: number) => [number, number];
   readonly init: () => void;
+  readonly ed25519Sign: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+  readonly ed25519SignatureFromBytes: (a: number, b: number) => [number, number, number, number];
+  readonly ed25519SigningKeyFromBytes: (a: number, b: number) => [number, number, number, number];
+  readonly ed25519SigningKeyToPublic: (a: number, b: number) => [number, number, number, number];
+  readonly ed25519Verify: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
+  readonly ed25519VerifyingKey: (a: number, b: number) => [number, number, number, number];
+  readonly ed25519VerifyingKeyFromBytes: (a: number, b: number) => [number, number, number, number];
+  readonly newEd25519SigningKey: () => [number, number];
+  readonly ed25519SigningKeySign: (a: number, b: number, c: number, d: number) => [number, number, number, number];
   readonly decrypt: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
   readonly decryptXsalsa20: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
   readonly encrypt: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
@@ -352,15 +369,6 @@ export interface InitOutput {
   readonly blake3hasher_update: (a: number, b: number, c: number) => void;
   readonly generateNonce: (a: number, b: number) => [number, number];
   readonly shortHash: (a: number, b: number) => [number, number];
-  readonly ed25519Sign: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly ed25519SignatureFromBytes: (a: number, b: number) => [number, number, number, number];
-  readonly ed25519SigningKeyFromBytes: (a: number, b: number) => [number, number, number, number];
-  readonly ed25519SigningKeyToPublic: (a: number, b: number) => [number, number, number, number];
-  readonly ed25519Verify: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
-  readonly ed25519VerifyingKey: (a: number, b: number) => [number, number, number, number];
-  readonly ed25519VerifyingKeyFromBytes: (a: number, b: number) => [number, number, number, number];
-  readonly newEd25519SigningKey: () => [number, number];
-  readonly ed25519SigningKeySign: (a: number, b: number, c: number, d: number) => [number, number, number, number];
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_exn_store: (a: number) => void;

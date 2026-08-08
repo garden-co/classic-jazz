@@ -20,7 +20,7 @@ import {
   SessionID,
   TransactionID,
 } from "../ids.js";
-import { Stringified, parseJSON } from "../jsonStringify.js";
+import { Stringified, parseJSON, safeParseJSON } from "../jsonStringify.js";
 import { JsonObject, JsonValue } from "../jsonValue.js";
 import { PermissionsDef as RulesetDef } from "../permissions.js";
 import { NewContentMessage } from "../sync.js";
@@ -273,7 +273,7 @@ export class VerifiedState {
     }
 
     // Convert transactions to JSON array
-    const txJson = JSON.stringify(newTransactions);
+    const txJson = stringifyTransactions(newTransactions);
 
     this.impl.addTransactions(
       sessionID,
@@ -627,6 +627,58 @@ export class VerifiedState {
     return parseJSON(decrypted as Stringified<JsonValue[]>);
   }
 
+  /**
+   * Batch-decrypt private transactions. Element i corresponds to
+   * txIndices[i]; undefined entries failed to decrypt. Uses the native batch
+   * fast path when available, transparently falling back to per-transaction
+   * decryptTransaction otherwise.
+   */
+  decryptTransactionsBatch(
+    sessionID: SessionID,
+    txIndices: number[],
+    keySecret: KeySecret,
+  ): (JsonValue[] | undefined)[] {
+    // Per-transaction fallback matching the batch's per-tx-failure semantics:
+    // each failed/throwing transaction becomes undefined.
+    const perTransactionFallback = (): (JsonValue[] | undefined)[] =>
+      txIndices.map((txIndex) => {
+        try {
+          return this.decryptTransaction(sessionID, txIndex, keySecret);
+        } catch {
+          return undefined;
+        }
+      });
+
+    const batch = this.impl.decryptTransactions;
+    if (!batch) {
+      return perTransactionFallback();
+    }
+
+    const combined = batch.call(
+      this.impl,
+      sessionID,
+      Uint32Array.from(txIndices),
+      keySecret,
+    );
+
+    if (combined === undefined) {
+      return perTransactionFallback();
+    }
+
+    // Corrupt combined plaintext parses to undefined: fall back per-tx.
+    const parsed = safeParseJSON(
+      combined as Stringified<(JsonValue[] | null)[]>,
+    );
+
+    if (!Array.isArray(parsed) || parsed.length !== txIndices.length) {
+      return perTransactionFallback();
+    }
+
+    return (parsed as (JsonValue[] | null)[]).map((entry) =>
+      entry == null ? undefined : entry,
+    );
+  }
+
   decryptTransactionMeta(
     sessionID: SessionID,
     txIndex: number,
@@ -646,6 +698,68 @@ export class VerifiedState {
     }
     return parseJSON(decrypted as Stringified<JsonObject>);
   }
+}
+
+// Matches characters that JSON.stringify would escape (or that would make a
+// naively quoted string invalid JSON): quotes, backslashes, control
+// characters and surrogates.
+const NEEDS_JSON_ESCAPING = new RegExp('["\\\\\\u0000-\\u001f\\ud800-\\udfff]');
+
+/**
+ * Serialize a JSON string value. Fast path for strings that need no escaping
+ * (the common case: base64url-encoded transaction payloads), falling back to
+ * JSON.stringify otherwise. Output is always byte-identical to JSON.stringify.
+ */
+function jsonString(value: string): string {
+  return NEEDS_JSON_ESCAPING.test(value) ? JSON.stringify(value) : `"${value}"`;
+}
+
+/**
+ * Serialize transactions for the native SessionMap.
+ *
+ * Equivalent to JSON.stringify(transactions), but avoids JSON.stringify's
+ * escape scanning for the large (base64url, escape-free) payload strings,
+ * which dominates the cost of importing large CoValues. The native side
+ * re-canonicalizes transactions before hashing, so only value equality with
+ * JSON.stringify matters here.
+ */
+export function stringifyTransactions(transactions: Transaction[]): string {
+  const parts: string[] = [];
+  for (const tx of transactions) {
+    if (
+      tx.privacy === "private" &&
+      typeof tx.encryptedChanges === "string" &&
+      typeof tx.keyUsed === "string" &&
+      typeof tx.madeAt === "number" &&
+      (tx.meta === undefined || typeof tx.meta === "string")
+    ) {
+      parts.push(
+        `{"encryptedChanges":${jsonString(tx.encryptedChanges)},"keyUsed":${jsonString(tx.keyUsed)},"madeAt":${tx.madeAt}${
+          tx.meta === undefined ? "" : `,"meta":${jsonString(tx.meta)}`
+        },"privacy":"private"}`,
+      );
+    } else if (
+      tx.privacy === "trusting" &&
+      typeof tx.changes === "string" &&
+      typeof tx.madeAt === "number" &&
+      (tx.meta === undefined || typeof tx.meta === "string")
+    ) {
+      parts.push(
+        `{"changes":${jsonString(tx.changes)},"madeAt":${tx.madeAt}${
+          tx.meta === undefined ? "" : `,"meta":${jsonString(tx.meta)}`
+        },"privacy":"trusting"}`,
+      );
+    } else {
+      // Unexpected shape: keep the generic (previous) behavior
+      parts.push(JSON.stringify(tx));
+    }
+  }
+  const out = `[${parts.join(",")}]`;
+  // Force V8 to flatten the rope built by the concatenations above: the
+  // wasm-bindgen string-passing glue reads via charCodeAt, which is
+  // pathologically slow on unflattened cons strings.
+  out.indexOf("\u0000");
+  return out;
 }
 
 function assertLastSignature(sessionID: SessionID, content: NewContentMessage) {

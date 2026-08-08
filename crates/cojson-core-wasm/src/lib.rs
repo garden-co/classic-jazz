@@ -342,4 +342,19 @@ impl SessionMap {
             .decrypt_transaction_meta(&session_id, tx_index, &key_secret)
             .map_err(|e| CojsonCoreWasmError::Js(JsValue::from_str(&e.to_string())))
     }
+
+    /// Decrypt many transactions in one call. `indices` is a `Uint32Array`.
+    /// Returns a JSON array string (element `i` is the decrypted changes of
+    /// `indices[i]`, or `null` if that tx could not be decrypted), or
+    /// `undefined` if the session does not exist.
+    #[wasm_bindgen(js_name = decryptTransactions)]
+    pub fn decrypt_transactions(
+        &self,
+        session_id: &str,
+        indices: &[u32],
+        key_secret: &str,
+    ) -> Option<String> {
+        self.internal
+            .decrypt_transactions(session_id, indices, key_secret)
+    }
 }

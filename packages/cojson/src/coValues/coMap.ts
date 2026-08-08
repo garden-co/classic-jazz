@@ -62,6 +62,14 @@ export class RawCoMap<
   latest: {
     [Key in keyof Shape & string]?: MapOp<Key, Shape[Key]>;
   } = {};
+  /**
+   * Cached result of `keys()` (present keys in `Object.keys(this.ops)` order),
+   * maintained incrementally across batches; `null` means "rebuild lazily on
+   * the next keys() call". Not used by time-travel clones, which filter ops
+   * per read. A plain (TS-private) property so `Object.create`-based clones
+   * stay valid.
+   */
+  private cachedKeys: (keyof Shape & string)[] | null = null;
   // We track the knownTransactions in multiple CoValues because branches
   // need to retrieve the transactions from both the source and the branch
   knownTransactions: Record<RawCoID, number> = {};
@@ -71,6 +79,7 @@ export class RawCoMap<
   protected resetInternalState() {
     this.ops = {};
     this.latest = {};
+    this.cachedKeys = null;
     this.knownTransactions = { [this.core.id]: 0 };
     this.totalValidTransactions = 0;
   }
@@ -117,9 +126,13 @@ export class RawCoMap<
     const { ops } = this;
 
     const changedEntries = new Map<
-      keyof typeof ops,
-      NonNullable<(typeof ops)[keyof typeof ops]>
+      keyof Shape & string,
+      MapOp<keyof Shape & string, Shape[keyof Shape & string]>[]
     >();
+    // Keys whose appended ops arrived out of time order (rare): only these
+    // need a re-sort; in-order appends keep the sorted invariant by
+    // themselves.
+    const unsortedKeys = new Set<keyof Shape & string>();
 
     for (const transaction of newValidTransactions) {
       const { txID, changes, madeAt, tx } = transaction;
@@ -143,6 +156,12 @@ export class RawCoMap<
           ops[change.key] = entries;
           changedEntries.set(change.key, entries);
         } else {
+          if (
+            this.core.compareTransactions(entries[entries.length - 1]!, entry) >
+            0
+          ) {
+            unsortedKeys.add(change.key);
+          }
           entries.push(entry);
           changedEntries.set(change.key, entries);
         }
@@ -151,15 +170,67 @@ export class RawCoMap<
       this.handleNewTransaction(transaction);
     }
 
-    for (const entries of changedEntries.values()) {
-      entries.sort(this.core.compareTransactions);
-    }
+    // The cache is only created in keys(), never during this loop, so a null
+    // check here covers the whole batch.
+    const cacheLive = this.cachedKeys !== null;
 
-    for (const [key, entries] of changedEntries.entries()) {
-      this.latest[key] = entries[entries.length - 1];
+    for (const [key, entries] of changedEntries) {
+      if (unsortedKeys.has(key)) {
+        entries.sort(this.core.compareTransactions);
+      }
+
+      const latest = entries[entries.length - 1]!;
+      if (cacheLive) {
+        this.updateCachedKeys(key, this.latest[key], latest);
+      }
+      this.latest[key] = latest;
     }
 
     this.totalValidTransactions += newValidTransactions.length;
+  }
+
+  /**
+   * Maintains `cachedKeys` for one key touched by a batch. Only presence
+   * transitions matter: a brand-new visible key appends (matching
+   * `Object.keys` order for non-integer keys), anything that changes an
+   * existing key's presence — or a new integer-like key, which JS would
+   * order numerically before string keys — drops the cache so the next
+   * `keys()` call rebuilds it.
+   *
+   * `previous === undefined` means the key is new: on a live instance every
+   * key in `ops` gets `latest` assigned by the batch that first created it.
+   */
+  private updateCachedKeys(
+    key: keyof Shape & string,
+    previous: MapOp<keyof Shape & string, JsonValue | undefined> | undefined,
+    latest: MapOp<keyof Shape & string, JsonValue | undefined>,
+  ) {
+    const cached = this.cachedKeys;
+    if (cached === null) {
+      return;
+    }
+
+    if (previous === undefined) {
+      if (!isPresentOp(latest)) {
+        // Deleted before ever being visible: keys() filters it out
+        return;
+      }
+      // charCode short-circuit: real-world keys almost never start with a
+      // digit, so skip the regex for them
+      const firstChar = key.charCodeAt(0);
+      if (firstChar >= 48 && firstChar <= 57 && INTEGER_LIKE_KEY.test(key)) {
+        this.cachedKeys = null;
+        return;
+      }
+      cached.push(key);
+      return;
+    }
+
+    if (isPresentOp(previous) !== isPresentOp(latest)) {
+      // The key's position in Object.keys order is its original first-op
+      // position, so a reappearing/disappearing key needs a rebuild.
+      this.cachedKeys = null;
+    }
   }
 
   handleNewTransaction(transaction: DecryptedTransaction) {}
@@ -208,18 +279,26 @@ export class RawCoMap<
    *
    * @category 1. Reading */
   keys<K extends keyof Shape & string = keyof Shape & string>(): K[] {
+    // Time-travel clones filter per read and share `ops` with the live
+    // instance, so they never use the cache.
+    if (this.isTimeTravelEntity()) {
+      return this.computeKeys();
+    }
+
+    let cached = this.cachedKeys;
+    if (cached === null) {
+      cached = this.computeKeys();
+      this.cachedKeys = cached;
+    }
+    return cached.slice() as K[];
+  }
+
+  private computeKeys<
+    K extends keyof Shape & string = keyof Shape & string,
+  >(): K[] {
     return (Object.keys(this.ops) as K[]).filter((key) => {
       const entry = this.getRaw(key);
-
-      if (entry === undefined) {
-        return false;
-      }
-
-      if (entry.change.op === "del") {
-        return false;
-      }
-
-      return true;
+      return entry !== undefined && isPresentOp(entry);
     });
   }
 
@@ -278,7 +357,7 @@ export class RawCoMap<
       [K in keyof Shape & string]: Shape[K];
     }> = {};
 
-    for (const key of Object.keys(this.ops) as (keyof Shape & string)[]) {
+    for (const key of this.keys()) {
       const value = this.get(key);
       if (value !== undefined) {
         object[key] = value;
@@ -455,6 +534,15 @@ export class RawCoMap<
 
     this.processNewTransactions();
   }
+}
+
+// Keys that JavaScript treats as array indices and orders numerically before
+// string keys in Object.keys (conservatively: any all-digit key).
+const INTEGER_LIKE_KEY = /^\d+$/;
+
+/** The single definition of "this op makes its key visible in keys()". */
+function isPresentOp(op: MapOp<string, JsonValue | undefined>): boolean {
+  return op.change.op !== "del";
 }
 
 export function operationToEditEntry<
