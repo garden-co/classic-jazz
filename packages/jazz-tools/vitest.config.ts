@@ -25,6 +25,12 @@ export default defineProject({
     alias: {
       // Force source resolution for jazz-tools/svelte during tests
       "jazz-tools/svelte": resolve(__dirname, "./src/svelte/index.ts"),
+      // react-native's entrypoint is Flow source that Vite cannot parse, which
+      // fails at transform time before vi.mock can intercept it
+      "react-native": resolve(
+        __dirname,
+        "./src/react-native/tests/react-native-stub.ts",
+      ),
     },
   },
   test: {
