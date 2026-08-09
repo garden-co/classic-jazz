@@ -31,6 +31,7 @@ import type {
   StoredCoValueRow,
   StoredSessionRow,
   StorageReconciliationAcquireResult,
+  TransactionRow,
 } from "./types.js";
 import { isDeleteSessionID } from "../ids.js";
 
@@ -140,19 +141,26 @@ export class StorageApiAsync implements StorageAPI {
 
     let contentStreaming = false;
 
-    await Promise.all(
-      allCoValueSessions.map(async (sessionRow) => {
-        const signatures = await this.dbClient.getSignatures(
-          sessionRow.rowID,
-          0,
-        );
-
-        if (signatures.length > 0) {
-          contentStreaming = true;
-          signaturesBySession.set(sessionRow.sessionID, signatures);
-        }
-      }),
+    const signaturesByRowID = await this.getSignaturesByRowID(
+      coValueRow.rowID,
+      allCoValueSessions,
     );
+
+    for (const sessionRow of allCoValueSessions) {
+      const signatures = signaturesByRowID.get(sessionRow.rowID);
+
+      if (signatures?.length) {
+        contentStreaming = true;
+        signaturesBySession.set(sessionRow.sessionID, signatures);
+      }
+    }
+
+    // Without stored signatures every session's requested range is its whole
+    // transaction log, so all of them can be fetched in a single query rather
+    // than one per session. Streaming coValues keep the per-range reads.
+    const prefetchedTxs = contentStreaming
+      ? undefined
+      : await this.getTransactionsByRowID(coValueRow.rowID);
 
     const knownState = this.knownStates.getKnownState(coValueRow.id);
     knownState.header = true;
@@ -188,11 +196,13 @@ export class StorageApiAsync implements StorageAPI {
       }
 
       for (const signature of signatures) {
-        const newTxsInSession = await this.dbClient.getNewTransactionInSession(
-          sessionRow.rowID,
-          idx,
-          signature.idx,
-        );
+        const newTxsInSession =
+          prefetchedTxs?.get(sessionRow.rowID) ??
+          (await this.dbClient.getNewTransactionInSession(
+            sessionRow.rowID,
+            idx,
+            signature.idx,
+          ));
 
         collectNewTxs({
           newTxsInSession,
@@ -234,6 +244,82 @@ export class StorageApiAsync implements StorageAPI {
 
     this.knownStates.handleUpdate(coValueRow.id, knownState);
     done?.(true);
+  }
+
+  /**
+   * Groups rows carrying a `ses` column by that session rowID.
+   */
+  private groupBySession<T extends { ses: number }>(
+    rows: T[],
+  ): Map<number, T[]> {
+    const bySession = new Map<number, T[]>();
+
+    for (const row of rows) {
+      const existing = bySession.get(row.ses);
+
+      if (existing) {
+        existing.push(row);
+      } else {
+        bySession.set(row.ses, [row]);
+      }
+    }
+
+    return bySession;
+  }
+
+  /**
+   * Every stored signature for a coValue, keyed by session rowID.
+   *
+   * Loading a coValue used to cost one signature query per session — with the
+   * transaction query below, `2 + 2 * sessions` reads per coValue. Signatures
+   * are rare (they only exist for content large enough to need streaming), so
+   * the overwhelming majority of those queries returned nothing.
+   */
+  private async getSignaturesByRowID(
+    coValueRowId: number,
+    sessions: StoredSessionRow[],
+  ): Promise<Map<number, Pick<SignatureAfterRow, "idx" | "signature">[]>> {
+    if (this.dbClient.getSignaturesForCoValue) {
+      return this.groupBySession(
+        await this.dbClient.getSignaturesForCoValue(coValueRowId),
+      );
+    }
+
+    const bySession = new Map<
+      number,
+      Pick<SignatureAfterRow, "idx" | "signature">[]
+    >();
+
+    await Promise.all(
+      sessions.map(async (sessionRow) => {
+        const signatures = await this.dbClient.getSignatures(
+          sessionRow.rowID,
+          0,
+        );
+
+        if (signatures.length > 0) {
+          bySession.set(sessionRow.rowID, signatures);
+        }
+      }),
+    );
+
+    return bySession;
+  }
+
+  /**
+   * Every transaction for a coValue, keyed by session rowID, or `undefined`
+   * when the client can't batch and the caller should read per session.
+   */
+  private async getTransactionsByRowID(
+    coValueRowId: number,
+  ): Promise<Map<number, TransactionRow[]> | undefined> {
+    if (!this.dbClient.getAllTransactionsForCoValue) {
+      return undefined;
+    }
+
+    return this.groupBySession(
+      await this.dbClient.getAllTransactionsForCoValue(coValueRowId),
+    );
   }
 
   private async pushContentWithDependencies(
