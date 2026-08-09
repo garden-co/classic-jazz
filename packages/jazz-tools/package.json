@@ -278,8 +278,8 @@
     "react-dom": "*",
     "react-native": "*",
     "react-native-fast-encoder": "^0.3.1",
-    "react-native-mmkv": "^3.3.0",
-    "react-native-nitro-modules": "^0.26.4",
+    "react-native-mmkv": "^4.0.0",
+    "react-native-nitro-modules": ">=0.31.0",
     "react-native-passkey": "^3.0.0",
     "sharp": "^0.33.5",
     "svelte": "^5.0.0"

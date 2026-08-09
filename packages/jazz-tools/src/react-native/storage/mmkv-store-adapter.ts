@@ -1,7 +1,7 @@
-import { KvStore } from "jazz-tools/react-native-core";
-import { MMKV } from "react-native-mmkv";
+import type { KvStore } from "jazz-tools/react-native-core";
+import { createMMKV } from "react-native-mmkv";
 
-const storage = new MMKV({
+const storage = createMMKV({
   id: "jazz-react-native.default",
 });
 
@@ -11,14 +11,15 @@ export class MMKVStore implements KvStore {
   }
 
   async set(key: string, value: string): Promise<void> {
-    return storage.set(key, value);
+    storage.set(key, value);
   }
 
   async delete(key: string): Promise<void> {
-    return storage.delete(key);
+    // v4 renamed `delete` to `remove`, and it returns a boolean we don't need.
+    storage.remove(key);
   }
 
   async clearAll(): Promise<void> {
-    return storage.clearAll();
+    storage.clearAll();
   }
 }
