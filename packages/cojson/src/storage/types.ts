@@ -285,6 +285,28 @@ export interface DBClientInterfaceAsync {
     firstNewTxIdx: number,
   ): Promise<SignatureAfterRow[]>;
 
+  /**
+   * Batched variant of {@link getSignatures}: every stored signature across all
+   * of a coValue's sessions, in one query.
+   *
+   * Optional — clients that don't implement it fall back to one
+   * {@link getSignatures} call per session. Rows carry `ses`, so the caller
+   * groups them by session itself.
+   */
+  getSignaturesForCoValue?(coValueRowId: number): Promise<SignatureAfterRow[]>;
+
+  /**
+   * Every transaction across all of a coValue's sessions, in one query.
+   *
+   * Only valid for coValues with no stored signatures, where each session's
+   * requested range is its whole transaction log. Optional — clients that
+   * don't implement it fall back to one {@link getNewTransactionInSession}
+   * call per session.
+   */
+  getAllTransactionsForCoValue?(
+    coValueRowId: number,
+  ): Promise<TransactionRow[]>;
+
   transaction(
     callback: (tx: DBTransactionInterfaceAsync) => Promise<unknown>,
   ): Promise<unknown>;
