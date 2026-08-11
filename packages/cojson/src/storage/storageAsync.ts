@@ -31,8 +31,20 @@ import type {
   StoredCoValueRow,
   StoredSessionRow,
   StorageReconciliationAcquireResult,
+  TransactionRow,
 } from "./types.js";
 import { isDeleteSessionID } from "../ids.js";
+
+/**
+ * How many signature checkpoints one streaming read covers. Checkpoints are
+ * written every `MAX_RECOMMENDED_TX_SIZE` (100KB), so this caps a read at
+ * roughly 1MB — low enough for a phone, high enough to take an order of
+ * magnitude off the round trips on a long log.
+ *
+ * ponytail: a constant, not an option. Make it configurable when a platform
+ * actually needs a different bound.
+ */
+const SIGNATURE_READ_BATCH = 10;
 
 export class StorageApiAsync implements StorageAPI {
   private readonly dbClient: DBClientInterfaceAsync;
@@ -140,19 +152,26 @@ export class StorageApiAsync implements StorageAPI {
 
     let contentStreaming = false;
 
-    await Promise.all(
-      allCoValueSessions.map(async (sessionRow) => {
-        const signatures = await this.dbClient.getSignatures(
-          sessionRow.rowID,
-          0,
-        );
-
-        if (signatures.length > 0) {
-          contentStreaming = true;
-          signaturesBySession.set(sessionRow.sessionID, signatures);
-        }
-      }),
+    const signaturesByRowID = await this.getSignaturesByRowID(
+      coValueRow.rowID,
+      allCoValueSessions,
     );
+
+    for (const sessionRow of allCoValueSessions) {
+      const signatures = signaturesByRowID.get(sessionRow.rowID);
+
+      if (signatures?.length) {
+        contentStreaming = true;
+        signaturesBySession.set(sessionRow.sessionID, signatures);
+      }
+    }
+
+    // Without stored signatures every session's requested range is its whole
+    // transaction log, so all of them can be fetched in a single query rather
+    // than one per session. Streaming coValues keep the per-range reads.
+    const prefetchedTxs = contentStreaming
+      ? undefined
+      : await this.getTransactionsByRowID(coValueRow.rowID);
 
     const knownState = this.knownStates.getKnownState(coValueRow.id);
     knownState.header = true;
@@ -187,12 +206,51 @@ export class StorageApiAsync implements StorageAPI {
         });
       }
 
-      for (const signature of signatures) {
-        const newTxsInSession = await this.dbClient.getNewTransactionInSession(
-          sessionRow.rowID,
-          idx,
-          signature.idx,
-        );
+      // Rows backing the checkpoints being handed out. Either the whole
+      // session — prefetched in one query when nothing streams — or a window of
+      // checkpoints read at a time. A streaming session otherwise costs one
+      // round trip per ~MAX_RECOMMENDED_TX_SIZE of log; batching cuts that by
+      // SIGNATURE_READ_BATCH× while keeping peak memory bounded, which reading
+      // the whole log at once would not.
+      //
+      // `transactions` is PRIMARY KEY (ses, idx) WITHOUT ROWID, so either read
+      // comes back in idx order — the assumption the per-checkpoint read
+      // already made.
+      // Gate on this session's entry, not on the prefetch as a whole: the
+      // batched read returns [] if any row fails to parse, and falling back to
+      // the per-range reads recovers the ranges that are still intact.
+      const prefetched = prefetchedTxs?.get(sessionRow.rowID);
+
+      let window: TransactionRow[] = prefetched ?? [];
+      let windowCursor = 0;
+      let windowEnd = prefetched ? Number.POSITIVE_INFINITY : -1;
+
+      for (const [i, signature] of signatures.entries()) {
+        if (signature.idx > windowEnd) {
+          windowEnd =
+            signatures[
+              Math.min(i + SIGNATURE_READ_BATCH - 1, signatures.length - 1)
+            ]!.idx;
+          window = await this.dbClient.getNewTransactionInSession(
+            sessionRow.rowID,
+            idx,
+            windowEnd,
+          );
+          windowCursor = 0;
+        }
+
+        // Never hand out past the signature that covers it. Session metadata and
+        // transactions are read in separate non-transactional queries, so a
+        // concurrent writer can land a row at idx=lastIdx in between; pairing it
+        // with this signature would fail verification.
+        const from = windowCursor;
+        while (
+          windowCursor < window.length &&
+          window[windowCursor]!.idx <= signature.idx
+        ) {
+          windowCursor++;
+        }
+        const newTxsInSession = window.slice(from, windowCursor);
 
         collectNewTxs({
           newTxsInSession,
@@ -234,6 +292,82 @@ export class StorageApiAsync implements StorageAPI {
 
     this.knownStates.handleUpdate(coValueRow.id, knownState);
     done?.(true);
+  }
+
+  /**
+   * Groups rows carrying a `ses` column by that session rowID.
+   */
+  private groupBySession<T extends { ses: number }>(
+    rows: T[],
+  ): Map<number, T[]> {
+    const bySession = new Map<number, T[]>();
+
+    for (const row of rows) {
+      const existing = bySession.get(row.ses);
+
+      if (existing) {
+        existing.push(row);
+      } else {
+        bySession.set(row.ses, [row]);
+      }
+    }
+
+    return bySession;
+  }
+
+  /**
+   * Every stored signature for a coValue, keyed by session rowID.
+   *
+   * Loading a coValue used to cost one signature query per session — with the
+   * transaction query below, `2 + 2 * sessions` reads per coValue. Signatures
+   * are rare (they only exist for content large enough to need streaming), so
+   * the overwhelming majority of those queries returned nothing.
+   */
+  private async getSignaturesByRowID(
+    coValueRowId: number,
+    sessions: StoredSessionRow[],
+  ): Promise<Map<number, Pick<SignatureAfterRow, "idx" | "signature">[]>> {
+    if (this.dbClient.getSignaturesForCoValue) {
+      return this.groupBySession(
+        await this.dbClient.getSignaturesForCoValue(coValueRowId),
+      );
+    }
+
+    const bySession = new Map<
+      number,
+      Pick<SignatureAfterRow, "idx" | "signature">[]
+    >();
+
+    await Promise.all(
+      sessions.map(async (sessionRow) => {
+        const signatures = await this.dbClient.getSignatures(
+          sessionRow.rowID,
+          0,
+        );
+
+        if (signatures.length > 0) {
+          bySession.set(sessionRow.rowID, signatures);
+        }
+      }),
+    );
+
+    return bySession;
+  }
+
+  /**
+   * Every transaction for a coValue, keyed by session rowID, or `undefined`
+   * when the client can't batch and the caller should read per session.
+   */
+  private async getTransactionsByRowID(
+    coValueRowId: number,
+  ): Promise<Map<number, TransactionRow[]> | undefined> {
+    if (!this.dbClient.getAllTransactionsForCoValue) {
+      return undefined;
+    }
+
+    return this.groupBySession(
+      await this.dbClient.getAllTransactionsForCoValue(coValueRowId),
+    );
   }
 
   private async pushContentWithDependencies(

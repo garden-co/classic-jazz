@@ -283,6 +283,41 @@ export class SQLiteClientAsync implements DBClientInterfaceAsync {
     );
   }
 
+  /**
+   * Fans out over the sessions index rather than binding one parameter per
+   * session, so a coValue with many sessions is still a single statement and
+   * can never hit SQLite's bound-variable limit.
+   */
+  async getSignaturesForCoValue(
+    coValueRowId: number,
+  ): Promise<SignatureAfterRow[]> {
+    return this.db.query<SignatureAfterRow>(
+      `SELECT * FROM signatureAfter
+       WHERE ses IN (SELECT rowID FROM sessions WHERE coValue = ?)`,
+      [coValueRowId],
+    );
+  }
+
+  async getAllTransactionsForCoValue(
+    coValueRowId: number,
+  ): Promise<TransactionRow[]> {
+    const txs = await this.db.query<RawTransactionRow>(
+      `SELECT * FROM transactions
+       WHERE ses IN (SELECT rowID FROM sessions WHERE coValue = ?)`,
+      [coValueRowId],
+    );
+
+    try {
+      return txs.map((transactionRow) => ({
+        ...transactionRow,
+        tx: JSON.parse(transactionRow.tx) as Transaction,
+      }));
+    } catch (e) {
+      logger.warn("Invalid JSON in transaction", { err: e });
+      return [];
+    }
+  }
+
   async getCoValueRowID(id: RawCoID): Promise<number | undefined> {
     const row = await this.db.get<{ rowID: number }>(
       "SELECT rowID FROM coValues WHERE id = ?",
