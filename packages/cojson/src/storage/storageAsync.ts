@@ -196,8 +196,15 @@ export class StorageApiAsync implements StorageAPI {
       }
 
       for (const signature of signatures) {
+        // The batched read has no idx bound, so apply the one the per-range
+        // query carried. Session metadata and transactions are read in separate
+        // non-transactional queries, and a concurrent writer can land a row at
+        // idx=lastIdx in between — pairing it with a signature that doesn't
+        // cover it fails verification.
         const newTxsInSession =
-          prefetchedTxs?.get(sessionRow.rowID) ??
+          prefetchedTxs
+            ?.get(sessionRow.rowID)
+            ?.filter((row) => row.idx >= idx && row.idx <= signature.idx) ??
           (await this.dbClient.getNewTransactionInSession(
             sessionRow.rowID,
             idx,
