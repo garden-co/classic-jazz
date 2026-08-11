@@ -133,6 +133,134 @@ async function readsToLoadCoValueWithSessions(sessionCount: number) {
   return driver.reads;
 }
 
+/**
+ * A coValue long enough to be split across signature checkpoints — the case the
+ * batched whole-coValue read deliberately skips. Returns the reads a load costs
+ * plus the content it produced.
+ */
+async function loadStreamingCoValue(txCount: number) {
+  const driver = new CountingDriver(newDbPath());
+  const storage = await getSqliteStorageAsync(driver);
+
+  const node = setupTestNode().node;
+  const group = node.createGroup();
+  const map = group.createMap();
+  for (let i = 0; i < txCount; i++) {
+    map.set(`k${i}`, "A".repeat(2048));
+  }
+  await map.core.waitForSync();
+
+  for (const msg of map.core.verified.newContentSince(undefined) ?? []) {
+    await new Promise<void>((resolve) => {
+      storage.store(msg, () => undefined, resolve);
+    });
+  }
+
+  storage.onCoValueUnmounted(map.id);
+  driver.reads = [];
+
+  const content: NewContentMessage[] = [];
+  await new Promise<void>((resolve) => {
+    storage.load(
+      map.id,
+      (data) => content.push(data),
+      () => resolve(),
+    );
+  });
+  await storage.close();
+
+  const flatten = (msgs: NewContentMessage[]) =>
+    msgs.flatMap((msg) =>
+      Object.values(msg.new).flatMap((entry) => entry.newTransactions),
+    );
+
+  return {
+    txReads: driver.reads.filter((sql) => sql.includes("FROM transactions"))
+      .length,
+    transactions: flatten(content),
+    // What was written, in order — the batched read has to reproduce it exactly.
+    expected: flatten(map.core.verified.newContentSince(undefined) ?? []),
+  };
+}
+
+test("a corrupt transaction row only costs its own session", async () => {
+  const driver = new CountingDriver(newDbPath());
+  const storage = await getSqliteStorageAsync(driver);
+
+  const node = setupTestNode().node;
+  const group = node.createGroup();
+  const map = group.createMap();
+  map.set("hello", "world");
+  await map.core.waitForSync();
+
+  const original = map.core.verified.newContentSince(undefined)?.[0];
+  if (!original) throw new Error("no content to store");
+
+  const [firstSessionID] = Object.keys(original.new) as SessionID[];
+  if (!firstSessionID) throw new Error("content has no sessions");
+  const entry = original.new[firstSessionID]!;
+
+  const msg: NewContentMessage = {
+    ...original,
+    new: Object.fromEntries(
+      Array.from({ length: 3 }, (_, i) => [
+        `${firstSessionID}${i === 0 ? "" : `-clone${i}`}` as SessionID,
+        { ...entry, newTransactions: [...entry.newTransactions] },
+      ]),
+    ),
+  };
+
+  await new Promise<void>((resolve) => {
+    storage.store(msg, () => undefined, resolve);
+  });
+
+  // The batched whole-coValue read parses every row under a single try/catch,
+  // so one bad row makes it return nothing for every session. Falling back to
+  // the per-session reads has to still recover the two intact ones.
+  const sessions = await driver.query<{ rowID: number }>(
+    "SELECT rowID FROM sessions WHERE coValue = (SELECT rowID FROM coValues WHERE id = ?) ORDER BY rowID",
+    [map.id],
+  );
+  expect(sessions).toHaveLength(3);
+  await driver.run("UPDATE transactions SET tx = 'not json' WHERE ses = ?", [
+    sessions[0]!.rowID,
+  ]);
+
+  storage.onCoValueUnmounted(map.id);
+
+  const content: NewContentMessage[] = [];
+  await new Promise<void>((resolve) => {
+    storage.load(
+      map.id,
+      (data) => content.push(data),
+      () => resolve(),
+    );
+  });
+  await storage.close();
+
+  // An empty session entry is still emitted for the corrupt one, so count the
+  // transactions actually recovered: 2 of 3 with the fallback, 0 without it.
+  const loadedTxs = content.flatMap((m) =>
+    Object.values(m.new).flatMap((e) => e.newTransactions),
+  );
+  expect(loadedTxs).toHaveLength(2);
+});
+
+test("a streaming coValue is read in batched checkpoint windows", async () => {
+  // 2KB values against a 100KB checkpoint means ~50 transactions per
+  // checkpoint, so this spans well over SIGNATURE_READ_BATCH checkpoints.
+  const { txReads, transactions, expected } = await loadStreamingCoValue(1000);
+
+  // Slicing a multi-checkpoint window by hand can drop, duplicate or reorder
+  // transactions without changing the count, so compare the whole log.
+  expect(transactions).toHaveLength(1000);
+  expect(transactions).toEqual(expected);
+
+  // One read per checkpoint would be ~20+; batching 10 at a time is ~2-3.
+  expect(txReads).toBeGreaterThan(0);
+  expect(txReads).toBeLessThan(5);
+});
+
 test("load cost does not grow with the number of sessions", async () => {
   const oneSession = await readsToLoadCoValueWithSessions(1);
   const manySessions = await readsToLoadCoValueWithSessions(30);

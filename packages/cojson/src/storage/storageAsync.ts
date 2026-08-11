@@ -35,6 +35,17 @@ import type {
 } from "./types.js";
 import { isDeleteSessionID } from "../ids.js";
 
+/**
+ * How many signature checkpoints one streaming read covers. Checkpoints are
+ * written every `MAX_RECOMMENDED_TX_SIZE` (100KB), so this caps a read at
+ * roughly 1MB — low enough for a phone, high enough to take an order of
+ * magnitude off the round trips on a long log.
+ *
+ * ponytail: a constant, not an option. Make it configurable when a platform
+ * actually needs a different bound.
+ */
+const SIGNATURE_READ_BATCH = 10;
+
 export class StorageApiAsync implements StorageAPI {
   private readonly dbClient: DBClientInterfaceAsync;
 
@@ -195,21 +206,51 @@ export class StorageApiAsync implements StorageAPI {
         });
       }
 
-      for (const signature of signatures) {
-        // The batched read has no idx bound, so apply the one the per-range
-        // query carried. Session metadata and transactions are read in separate
-        // non-transactional queries, and a concurrent writer can land a row at
-        // idx=lastIdx in between — pairing it with a signature that doesn't
-        // cover it fails verification.
-        const newTxsInSession =
-          prefetchedTxs
-            ?.get(sessionRow.rowID)
-            ?.filter((row) => row.idx >= idx && row.idx <= signature.idx) ??
-          (await this.dbClient.getNewTransactionInSession(
+      // Rows backing the checkpoints being handed out. Either the whole
+      // session — prefetched in one query when nothing streams — or a window of
+      // checkpoints read at a time. A streaming session otherwise costs one
+      // round trip per ~MAX_RECOMMENDED_TX_SIZE of log; batching cuts that by
+      // SIGNATURE_READ_BATCH× while keeping peak memory bounded, which reading
+      // the whole log at once would not.
+      //
+      // `transactions` is PRIMARY KEY (ses, idx) WITHOUT ROWID, so either read
+      // comes back in idx order — the assumption the per-checkpoint read
+      // already made.
+      // Gate on this session's entry, not on the prefetch as a whole: the
+      // batched read returns [] if any row fails to parse, and falling back to
+      // the per-range reads recovers the ranges that are still intact.
+      const prefetched = prefetchedTxs?.get(sessionRow.rowID);
+
+      let window: TransactionRow[] = prefetched ?? [];
+      let windowCursor = 0;
+      let windowEnd = prefetched ? Number.POSITIVE_INFINITY : -1;
+
+      for (const [i, signature] of signatures.entries()) {
+        if (signature.idx > windowEnd) {
+          windowEnd =
+            signatures[
+              Math.min(i + SIGNATURE_READ_BATCH - 1, signatures.length - 1)
+            ]!.idx;
+          window = await this.dbClient.getNewTransactionInSession(
             sessionRow.rowID,
             idx,
-            signature.idx,
-          ));
+            windowEnd,
+          );
+          windowCursor = 0;
+        }
+
+        // Never hand out past the signature that covers it. Session metadata and
+        // transactions are read in separate non-transactional queries, so a
+        // concurrent writer can land a row at idx=lastIdx in between; pairing it
+        // with this signature would fail verification.
+        const from = windowCursor;
+        while (
+          windowCursor < window.length &&
+          window[windowCursor]!.idx <= signature.idx
+        ) {
+          windowCursor++;
+        }
+        const newTxsInSession = window.slice(from, windowCursor);
 
         collectNewTxs({
           newTxsInSession,
