@@ -27,6 +27,18 @@ async function filesIn(directory) {
   }))).flat();
 }
 
+async function hasPageContent(url, framework) {
+  const source = path.join("content/docs", url.replace(/^\/docs\//, ""));
+  try {
+    const entries = await fs.readdir(source);
+    return entries.some((entry) => entry.endsWith(".mdx") &&
+      (!FRAMEWORKS.includes(path.basename(entry, ".mdx")) || entry === `${framework}.mdx`));
+  } catch (error) {
+    if (error.code !== "ENOENT" && error.code !== "ENOTDIR") throw error;
+    return fs.access(`${source}.mdx`).then(() => true, () => false);
+  }
+}
+
 test("every Classic docs source carries the literal warning first", async () => {
   const sources = (await filesIn("content/docs")).filter((file) => file.endsWith(".mdx"));
   assert.ok(sources.length > 0);
@@ -71,9 +83,9 @@ test("all LLM exports identify Classic and retain each embedded page warning", a
           const start = content.indexOf(heading);
           assert.ok(start >= 0, `${filename}: missing ${page.title}`);
           const rest = content.slice(start + heading.length).trimStart();
-          // Empty framework variants have no page content to label.
-          if (!rest || rest.startsWith("## ") || rest.startsWith("### ")) continue;
-          assertWarning(rest, `${filename}: ${page.title}`);
+          if (await hasPageContent(page.url, framework)) {
+            assertWarning(rest, `${filename}: ${page.title}`);
+          }
         }
       }
     }
