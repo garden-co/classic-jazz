@@ -1,18 +1,5 @@
-<aside className="classic-docs-warning" aria-label="Classic Jazz documentation">
-
 **Classic Jazz documentation — for existing Classic Jazz projects**
 
 Classic Jazz is no longer under active development. **For new projects, use Jazz v2.0 or later and the [current documentation](https://jazz.tools/docs).**
 
 **Use this documentation only when your project uses Classic Jazz.** Its APIs and examples are not guidance for Jazz v2.0 or later. If you are unsure which version your project uses, check its dependencies before following these instructions.
-
-</aside>
-
-export const metadata = {
-  description: "We do not currently support Clerk in React Native, but we do have support for React Native Expo."
-};
-
-
-# Clerk Authentication
-
-We do not currently support Clerk in React Native, but we do have support for [React Native Expo](/docs/react-native-expo/key-features/authentication/clerk).
