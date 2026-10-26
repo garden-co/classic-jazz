@@ -109,7 +109,7 @@ createRoot(document.getElementById("root")!).render(
       <JazzReactProvider
         authSecretStorageKey="examples/chat"
         sync={{
-          peer: `wss://cloud.jazz.tools/?key=${apiKey}`,
+          peer: `${(import.meta.env.VITE_JAZZ_SYNC_URL as `wss://${string}` | undefined) ?? "wss://cloud.jazz.tools"}/?key=${apiKey}`,
         }}
         defaultProfileName={defaultProfileName}
       >
