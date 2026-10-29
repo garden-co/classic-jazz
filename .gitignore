@@ -35,3 +35,7 @@ test-results
 .claude/settings.local.json
 
 playwright-report
+# Local yardstick scratch/cache (created by bench/cojson/yardstick-compare.sh)
+.yardstick-cargo-target/
+.yardstick-scratch/
+.yardstick-main-worktree/

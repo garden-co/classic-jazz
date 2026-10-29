@@ -1,5 +1,6 @@
 import {
   SessionMap as NativeSessionMap,
+  NodeCore as NativeNodeCore,
   Blake3Hasher,
   blake3HashOnce,
   blake3HashOnceWithContext,
@@ -26,6 +27,11 @@ import {
   CryptoProvider,
   Encrypted,
   KeySecret,
+  NodeCoreGroupVerdict,
+  NodeCoreImpl,
+  NodeCoreIngestOutcome,
+  NodeCorePendingTx,
+  NodeCoreVerdictDelta,
   Sealed,
   SealedForGroup,
   SealerID,
@@ -39,6 +45,41 @@ import {
   textEncoder,
 } from "./crypto.js";
 import { WasmCrypto } from "./WasmCrypto.js";
+
+/**
+ * Bridge one public {@link NodeCorePendingTx} to the napi `PendingTx` object.
+ * Seam: the native `SourceTxId` object is plain camelCase (`sessionId`/
+ * `txIndex`) because napi objects bypass serde's `#[serde(rename)]`; the public
+ * TS type follows this codebase's `sessionID` convention for transaction-identity
+ * wire objects (matching `TransactionID`). Bridge the casing here.
+ */
+function napiPendingTx(p: NodeCorePendingTx) {
+  return {
+    sessionId: p.sessionId,
+    txIndex: p.txIndex,
+    sourceMadeAt: p.sourceMadeAt,
+    metaJson: p.metaJson,
+    sourceTxId: p.sourceTxId
+      ? { sessionId: p.sourceTxId.sessionID, txIndex: p.sourceTxId.txIndex }
+      : undefined,
+  };
+}
+
+function napiVerdict(v: {
+  sessionId: string;
+  txIndex: number;
+  valid: boolean;
+  outcome: string;
+  reason?: string | null;
+}): NodeCoreGroupVerdict {
+  return {
+    sessionId: v.sessionId,
+    txIndex: v.txIndex,
+    valid: v.valid,
+    outcome: v.outcome as "valid" | "invalid" | "validBranchPointerOnly",
+    reason: v.reason ?? undefined,
+  };
+}
 
 import { Transaction } from "../coValueCore/verifiedState.js";
 
@@ -230,6 +271,10 @@ export class NapiCrypto extends CryptoProvider<Blake3State> {
       new NativeSessionMap(coID, headerJson, maxTxSize, skipVerify),
     );
   }
+
+  override createNodeCore(): NodeCoreImpl {
+    return new NapiNodeCoreAdapter(new NativeNodeCore());
+  }
 }
 
 /**
@@ -397,5 +442,343 @@ class SessionMapAdapter implements SessionMapImpl {
       this.sessionMap.decryptTransactionMeta(sessionId, txIndex, keySecret) ??
       undefined
     );
+  }
+}
+
+/**
+ * Adapter wrapping the native NodeCore registry to implement NodeCoreImpl.
+ */
+class NapiNodeCoreAdapter implements NodeCoreImpl {
+  constructor(private readonly nodeCore: NativeNodeCore) {}
+
+  // === Registry ===
+  createCoValue(
+    coId: string,
+    headerJson: string,
+    maxTxSize?: number,
+    skipVerify?: boolean,
+  ): void {
+    this.nodeCore.createCoValue(coId, headerJson, maxTxSize, skipVerify);
+  }
+
+  hasCoValue(coId: string): boolean {
+    return this.nodeCore.hasCoValue(coId);
+  }
+
+  removeCoValue(coId: string): void {
+    this.nodeCore.removeCoValue(coId);
+  }
+
+  coValueCount(): number {
+    return this.nodeCore.coValueCount();
+  }
+
+  // === Header ===
+  getHeader(coId: string): string {
+    return this.nodeCore.getHeader(coId);
+  }
+
+  // === Transaction Operations ===
+  addTransactions(
+    coId: string,
+    sessionId: string,
+    signerId: string | undefined,
+    transactionsJson: string,
+    signature: string,
+    skipVerify: boolean,
+  ): void {
+    this.nodeCore.addTransactions(
+      coId,
+      sessionId,
+      signerId,
+      transactionsJson,
+      signature,
+      skipVerify,
+    );
+  }
+
+  makeNewPrivateTransaction(
+    coId: string,
+    sessionId: string,
+    signerSecret: string,
+    changesJson: string,
+    keyId: string,
+    keySecret: string,
+    metaJson: string | undefined,
+    madeAt: number,
+  ): string {
+    return this.nodeCore.makeNewPrivateTransaction(
+      coId,
+      sessionId,
+      signerSecret,
+      changesJson,
+      keyId,
+      keySecret,
+      metaJson,
+      madeAt,
+    );
+  }
+
+  makeNewTrustingTransaction(
+    coId: string,
+    sessionId: string,
+    signerSecret: string,
+    changesJson: string,
+    metaJson: string | undefined,
+    madeAt: number,
+  ): string {
+    return this.nodeCore.makeNewTrustingTransaction(
+      coId,
+      sessionId,
+      signerSecret,
+      changesJson,
+      metaJson,
+      madeAt,
+    );
+  }
+
+  // === Session Queries ===
+  getSessionIds(coId: string): string[] {
+    return this.nodeCore.getSessionIds(coId);
+  }
+
+  getTransactionCount(coId: string, sessionId: string): number {
+    return this.nodeCore.getTransactionCount(coId, sessionId);
+  }
+
+  getTransaction(
+    coId: string,
+    sessionId: string,
+    txIndex: number,
+  ): Transaction | undefined {
+    const result = this.nodeCore.getTransaction(coId, sessionId, txIndex);
+    if (!result) return undefined;
+    return JSON.parse(result) as Transaction;
+  }
+
+  getSessionTransactions(
+    coId: string,
+    sessionId: string,
+    fromIndex: number,
+  ): Transaction[] | undefined {
+    const result = this.nodeCore.getSessionTransactions(
+      coId,
+      sessionId,
+      fromIndex,
+    );
+    if (!result) return undefined;
+    return result.map((tx) => JSON.parse(tx) as Transaction);
+  }
+
+  getLastSignature(coId: string, sessionId: string): string | undefined {
+    return this.nodeCore.getLastSignature(coId, sessionId) ?? undefined;
+  }
+
+  getSignatureAfter(
+    coId: string,
+    sessionId: string,
+    txIndex: number,
+  ): string | undefined {
+    return (
+      this.nodeCore.getSignatureAfter(coId, sessionId, txIndex) ?? undefined
+    );
+  }
+
+  getLastSignatureCheckpoint(
+    coId: string,
+    sessionId: string,
+  ): number | undefined {
+    return (
+      this.nodeCore.getLastSignatureCheckpoint(coId, sessionId) ?? undefined
+    );
+  }
+
+  // === Known State ===
+  getKnownState(coId: string): {
+    id: string;
+    header: boolean;
+    sessions: Record<string, number>;
+  } {
+    // NAPI returns a native JS object via #[napi(object)]
+    return this.nodeCore.getKnownState(coId) as {
+      id: string;
+      header: boolean;
+      sessions: Record<string, number>;
+    };
+  }
+
+  getKnownStateWithStreaming(
+    coId: string,
+  ):
+    | { id: string; header: boolean; sessions: Record<string, number> }
+    | undefined {
+    // NAPI returns a native JS object via #[napi(object)], or undefined
+    const result = this.nodeCore.getKnownStateWithStreaming(coId);
+    if (!result || result === undefined) return undefined;
+    return result as {
+      id: string;
+      header: boolean;
+      sessions: Record<string, number>;
+    };
+  }
+
+  isStreaming(coId: string): boolean {
+    return this.nodeCore.isStreaming(coId);
+  }
+
+  setStreamingKnownState(coId: string, streamingJson: string): void {
+    this.nodeCore.setStreamingKnownState(coId, streamingJson);
+  }
+
+  // === Deletion ===
+  markAsDeleted(coId: string): void {
+    this.nodeCore.markAsDeleted(coId);
+  }
+
+  isDeleted(coId: string): boolean {
+    return this.nodeCore.isDeleted(coId);
+  }
+
+  // === Decryption ===
+  decryptTransaction(
+    coId: string,
+    sessionId: string,
+    txIndex: number,
+    keySecret: string,
+  ): string | undefined {
+    return (
+      this.nodeCore.decryptTransaction(coId, sessionId, txIndex, keySecret) ??
+      undefined
+    );
+  }
+
+  decryptTransactionMeta(
+    coId: string,
+    sessionId: string,
+    txIndex: number,
+    keySecret: string,
+  ): string | undefined {
+    return (
+      this.nodeCore.decryptTransactionMeta(
+        coId,
+        sessionId,
+        txIndex,
+        keySecret,
+      ) ?? undefined
+    );
+  }
+
+  // === Transaction Validation (stage 3) ===
+  validateTransactions(
+    coId: string,
+    pending: NodeCorePendingTx[],
+  ): NodeCoreGroupVerdict[] {
+    return this.nodeCore
+      .validateTransactions(coId, pending.map(napiPendingTx))
+      .map(napiVerdict);
+  }
+
+  validateTransactionsDelta(
+    coId: string,
+    sinceGeneration: number,
+    sinceCount: number,
+    pending: NodeCorePendingTx[],
+  ): NodeCoreVerdictDelta {
+    const delta = this.nodeCore.validateTransactionsDelta(
+      coId,
+      sinceGeneration,
+      sinceCount,
+      pending.map(napiPendingTx),
+    );
+    return {
+      generation: delta.generation,
+      fromIndex: delta.fromIndex,
+      verdicts: delta.verdicts.map(napiVerdict),
+    };
+  }
+
+  roleOf(groupId: string, member: string, atTime?: number): string | undefined {
+    return this.nodeCore.roleOf(groupId, member, atTime) ?? undefined;
+  }
+
+  resetValidation(coId: string): void {
+    this.nodeCore.resetValidation(coId);
+  }
+
+  provideKeySecret(keyId: string, keySecret: string): void {
+    this.nodeCore.provideKeySecret(keyId, keySecret);
+  }
+
+  // === coMap materialization (stage 2b) ===
+  mapMaterialize(coId: string, pending: NodeCorePendingTx[]): number {
+    return this.nodeCore.mapMaterialize(coId, pending.map(napiPendingTx));
+  }
+
+  mapGet(coId: string, key: string): string | undefined {
+    return this.nodeCore.mapGet(coId, key) ?? undefined;
+  }
+
+  mapGetAt(coId: string, key: string, atTime?: number): string | undefined {
+    return this.nodeCore.mapGetAt(coId, key, atTime) ?? undefined;
+  }
+
+  mapSnapshot(coId: string): string {
+    return this.nodeCore.mapSnapshot(coId);
+  }
+
+  mapDelta(coId: string, sinceVersion: number): string {
+    return this.nodeCore.mapDelta(coId, sinceVersion);
+  }
+
+  mapDeltaRich(coId: string, sinceVersion: number): string {
+    return this.nodeCore.mapDeltaRich(coId, sinceVersion);
+  }
+
+  mapGetAtFrontier(
+    coId: string,
+    key: string,
+    frontierJson: string,
+  ): string | undefined {
+    return this.nodeCore.mapGetAtFrontier(coId, key, frontierJson) ?? undefined;
+  }
+
+  mapSnapshotAtFrontier(coId: string, frontierJson: string): string {
+    return this.nodeCore.mapSnapshotAtFrontier(coId, frontierJson);
+  }
+
+  ingestAndMaterialize(
+    coId: string,
+    sessionId: string,
+    signerId: string | undefined,
+    transactionsJson: string,
+    signature: string,
+    skipVerify: boolean,
+    sinceVersion: number,
+    pending: NodeCorePendingTx[],
+  ): NodeCoreIngestOutcome {
+    const outcome = this.nodeCore.ingestAndMaterialize(
+      coId,
+      sessionId,
+      signerId ?? undefined,
+      transactionsJson,
+      signature,
+      skipVerify,
+      sinceVersion,
+      pending.map(napiPendingTx),
+    );
+    return {
+      generation: outcome.generation,
+      count: outcome.count,
+      viewVersion: outcome.viewVersion,
+      deltaJson: outcome.deltaJson,
+    };
+  }
+
+  missingKeyIds(coId: string): string[] {
+    return this.nodeCore.missingKeyIds(coId);
+  }
+
+  supportsNativeCoMapMaterialization(): boolean {
+    return true;
   }
 }

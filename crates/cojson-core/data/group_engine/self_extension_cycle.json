@@ -1,0 +1,58 @@
+{
+  "description": "a group cannot extend itself (circular dependency)",
+  "covalues": [
+    {
+      "coId": "co_zn1grrqdX3CmYbvC3Jrvaaeiy7D",
+      "headerJson": "{\"createdAt\":\"2026-07-03T23:11:07.013Z\",\"meta\":null,\"ruleset\":{\"initialAdmin\":\"sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":\"z4HJaT8UpFV25UFQ83\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD_session_zwCnmTa9UoU",
+          "signerId": "sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120267013,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z5e6VJc1oEK13vUHNR_for_sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD\\\",\\\"value\\\":\\\"sealed_Ui9aZreENMCw3HyvoW6un8HmBn_5FE9wgpUbZcWOG_Pgw37jvrnGF6jZ1kP10NMfk_TSqpCxWjbNouimarIyPmOHZ62VUpZhsCA==\\\"}]\",\"madeAt\":1783120267014,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z5e6VJc1oEK13vUHNR\\\"}]\",\"madeAt\":1783120267014,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"groupSealer\\\",\\\"value\\\":\\\"key_z5e6VJc1oEK13vUHNR@sealer_z3Dhw9y4FRimHfTj84R7KcnbymBY8Wq3mTKbRhHhZ2ZZT\\\"}]\",\"madeAt\":1783120267014,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"parent_co_zn1grrqdX3CmYbvC3Jrvaaeiy7D\\\",\\\"value\\\":\\\"extend\\\"}]\",\"madeAt\":1783120267014,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z2ZTHVwxtjaMfy9T5nmJkVVR3ddSuwwoQXink8fFqF33FFce9yL42dzJ7bUAf7ec7zUpCWE5TkUhXWFvX3wHAEEcs"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_zn1grrqdX3CmYbvC3Jrvaaeiy7D": [
+      {
+        "sessionId": "sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD_session_zwCnmTa9UoU",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD_session_zwCnmTa9UoU",
+        "txIndex": 1,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD_session_zwCnmTa9UoU",
+        "txIndex": 2,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD_session_zwCnmTa9UoU",
+        "txIndex": 3,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_zDLrz3jaRxTbWRF5zcNLAiPFmp6zktoYbiHCZuGJvrgdQ/signer_z2x9ijaZrsNaZCuMAh6DisRSRNVtnxCy2LyHU6nDvt4FD_session_zwCnmTa9UoU",
+        "txIndex": 4,
+        "valid": false,
+        "reason": "Parent group is a circular dependency"
+      }
+    ]
+  },
+  "roleQueries": []
+}

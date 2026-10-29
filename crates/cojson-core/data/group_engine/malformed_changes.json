@@ -1,0 +1,79 @@
+{
+  "description": "malformed group transactions: multiple changes, non-set op, invalid role value, everyone with invalid role",
+  "covalues": [
+    {
+      "coId": "co_ziu6yhrdYUBTL6VCHfXJVqWnj5Y",
+      "headerJson": "{\"createdAt\":\"2026-07-03T23:11:07.016Z\",\"meta\":null,\"ruleset\":{\"initialAdmin\":\"sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":\"z3h8gvK9x5fncExQtj\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6_session_zjjRyRUss4fN",
+          "signerId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120267016,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z2uVHKDQJrksBugPKd_for_sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6\\\",\\\"value\\\":\\\"sealed_UWIKyeDrQosdL_3uRccw-sMcRY5Tt9dZAT4_rPYzJwKO6d27ve1d7LaHpsZjmuwq-nPs1sg0hUHBdeuDLtgoWkQVPv0cuA_NZJA==\\\"}]\",\"madeAt\":1783120267016,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z2uVHKDQJrksBugPKd\\\"}]\",\"madeAt\":1783120267016,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"groupSealer\\\",\\\"value\\\":\\\"key_z2uVHKDQJrksBugPKd@sealer_z5iKfAdrRsUX59bPrhdYDcG7oEDgWKeTwk5qLL3RXqC1T\\\"}]\",\"madeAt\":1783120267016,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zHCD8BQ6AwApDAMtAePFafpSGBrq5uwkAcp1XsTiVjdtt/signer_z9rYLyQkycYWE2hTkCtsiTtpbGewM9edbAqv3BSesr6ga\\\",\\\"value\\\":\\\"reader\\\"},{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zAz1DtidMzMSfbBy98PU9SB5GZSvKmLPrZvGsdpVcHWKo/signer_zCTLwyyagvhYs3TpmTfwJyvmxVfen1EY9HCvhm43fsSSr\\\",\\\"value\\\":\\\"reader\\\"}]\",\"madeAt\":1783120267017,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"del\\\",\\\"key\\\":\\\"sealer_zHCD8BQ6AwApDAMtAePFafpSGBrq5uwkAcp1XsTiVjdtt/signer_z9rYLyQkycYWE2hTkCtsiTtpbGewM9edbAqv3BSesr6ga\\\"}]\",\"madeAt\":1783120267017,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zHCD8BQ6AwApDAMtAePFafpSGBrq5uwkAcp1XsTiVjdtt/signer_z9rYLyQkycYWE2hTkCtsiTtpbGewM9edbAqv3BSesr6ga\\\",\\\"value\\\":\\\"superadmin\\\"}]\",\"madeAt\":1783120267017,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"everyone\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783120267017,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_zDvJcB38PwLmm1Rdq3xVaB6vYbUBHt4gpTTYBHCkmBdQJg7vrnH2eLvypmJzfCk6GD1dmQiXwrx2oQyqWMR7hccC"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_ziu6yhrdYUBTL6VCHfXJVqWnj5Y": [
+      {
+        "sessionId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6_session_zjjRyRUss4fN",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6_session_zjjRyRUss4fN",
+        "txIndex": 1,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6_session_zjjRyRUss4fN",
+        "txIndex": 2,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6_session_zjjRyRUss4fN",
+        "txIndex": 3,
+        "valid": true,
+        "reason": null
+      },
+      {
+        "sessionId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6_session_zjjRyRUss4fN",
+        "txIndex": 4,
+        "valid": false,
+        "reason": "Group transaction must have exactly one change"
+      },
+      {
+        "sessionId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6_session_zjjRyRUss4fN",
+        "txIndex": 5,
+        "valid": false,
+        "reason": "Group transaction must set a role or readKey"
+      },
+      {
+        "sessionId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6_session_zjjRyRUss4fN",
+        "txIndex": 6,
+        "valid": false,
+        "reason": "Group transaction must set a valid role"
+      },
+      {
+        "sessionId": "sealer_z8C2ifhVc8njqJN5AeeBRu3d6P7MHkZV7afxNAubxS8ue/signer_z9UrGskTXJyRPD4qxzSWN69Kkdvxmddb6f5Pvaoa1zTm6_session_zjjRyRUss4fN",
+        "txIndex": 7,
+        "valid": false,
+        "reason": "Everyone can only be set to reader, writer, writeOnly or revoked"
+      }
+    ]
+  },
+  "roleQueries": []
+}

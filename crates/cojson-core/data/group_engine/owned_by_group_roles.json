@@ -1,0 +1,237 @@
+{
+  "description": "a comap owned by a group: admin/manager/writer/writeOnly writes are valid; a reader write and a non-member write are both rejected 'Transactor has no write permissions' (agentInAccountOrMemberInGroup never returns undefined, so 'Transactor not found in group' is unreachable)",
+  "covalues": [
+    {
+      "coId": "co_z4kPxjimAd1xegGzWpdqHeFy9Rk",
+      "headerJson": "{\"createdAt\":\"2026-07-04T03:10:38.392Z\",\"meta\":null,\"ruleset\":{\"group\":\"co_zA7PwcGBWdugwzgvwLCnxjcP1KS\",\"type\":\"ownedByGroup\"},\"type\":\"comap\",\"uniqueness\":\"z7nTGToGYgKFA5LwB\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z5yb9jDoaerszMR83JhpYwjFoAMcZv8zhDYBkyRBYiH7k/signer_zGWc3p9F2RC6HVwc5UeAEg69ixA5NeS6PSbkZ5M37ca9h_session_zF1sJfNqXDfQ",
+          "signerId": "sealer_z5yb9jDoaerszMR83JhpYwjFoAMcZv8zhDYBkyRBYiH7k/signer_zGWc3p9F2RC6HVwc5UeAEg69ixA5NeS6PSbkZ5M37ca9h",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"byAdmin\\\",\\\"value\\\":1}]\",\"madeAt\":1783134638392,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z3RxFyhuS7patQ19Cp4jBWxPbfZGt9iE1uUACK1zTaVifEgqg6GHzQY4noZr1vjeDwP57EZQ2KSMtCyawzJDEDgoq"
+        },
+        {
+          "sessionId": "co_zQ1cMPdtvenpwD2GfWN3kiS36V1_session_zJN7X1Tq5qsz",
+          "signerId": "signer_zAT4DopCBHuzQumc8YY5DSLxP2CMnujKYFcjiRDdE113R",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"byManager\\\",\\\"value\\\":1}]\",\"madeAt\":1783134638393,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z3njnPpncPCJiSwMPJjhaxx6M7PwoWqnwqM32M72AaRq3Rz7kdUN4jdNxkpJVwog9ghh6Td4DovMn7hE9kJFW6k4w"
+        },
+        {
+          "sessionId": "co_zmoXpCD2Xzm8xxmZ4YcpdNdwaQf_session_zDM4FYHau6E6",
+          "signerId": "signer_z3a42YFaTdxHNUupBQAcQ8pVu1X2Bx1Qe56S1AJDEGeFs",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"byWriter\\\",\\\"value\\\":1}]\",\"madeAt\":1783134638394,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z57LHEEPYLtB9CCjdCygxrt3DJYRT5po2sVCKVP1xXhYciQLdzATXf6a6C8VWHQboTUdMj5r6SAiYfPHCiWrNaYg3"
+        },
+        {
+          "sessionId": "co_zPsH7Fz5JUUxa5SQQibUy8MyXhT_session_zLHDfvT8PSyr",
+          "signerId": "signer_zHZnA2VBvLEfSwJsfSxPjAs6Xbc6uJkkZMcSkyUHH2o7U",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"byWriteOnly\\\",\\\"value\\\":1}]\",\"madeAt\":1783134638395,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_zbXC6UqXitfK5eaTuUk6QBxd8mCkTnk4ovLQohJGbkjRko93PoP43DXx8HrSqG8aWT3HqmYC9HMxuAHVTk6pa6Uy"
+        },
+        {
+          "sessionId": "co_zLBuQMXfNTdAeHsY73vxFKL6w58_session_z4zesBEdyiY9",
+          "signerId": "signer_z7cyN65zzefpvWUDimaByYYJaXT4rHCmBD8Ty6nKA5u6Q",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"byReader\\\",\\\"value\\\":1}]\",\"madeAt\":1783134638395,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_zWRCtiCruKB9ktR1iUePhMUMdRCSTqSvxCqpPLyMKhSTRnQ9eP5HnQhbde5hggpqnSVjJqPAtbp8jtFrVDrJCe7B"
+        },
+        {
+          "sessionId": "sealer_zH8isoin3PM1doax6EDc1rb6izZeaUPsSHG11fXbJG2ED/signer_z5CfF6NtSodZo68o7Kv54rticJBk5cWvQRvY7PeQyQpHf_session_zacxiLzVTNH8",
+          "signerId": "signer_z5CfF6NtSodZo68o7Kv54rticJBk5cWvQRvY7PeQyQpHf",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"byNonMember\\\",\\\"value\\\":1}]\",\"madeAt\":1783134638397,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z2DDB2ptEzrFmcE15t1JBWdAKqDiQbxoSutwGSyio9JDN8t2oeQq2N5oqWAgeHfzrjYheH71Sf2fYMC6WDgx4FLDc"
+        }
+      ]
+    },
+    {
+      "coId": "co_zA7PwcGBWdugwzgvwLCnxjcP1KS",
+      "headerJson": "{\"createdAt\":\"2026-07-04T03:10:38.389Z\",\"meta\":null,\"ruleset\":{\"initialAdmin\":\"sealer_z5yb9jDoaerszMR83JhpYwjFoAMcZv8zhDYBkyRBYiH7k/signer_zGWc3p9F2RC6HVwc5UeAEg69ixA5NeS6PSbkZ5M37ca9h\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":\"z3LNWL96n21h2czaLD\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z5yb9jDoaerszMR83JhpYwjFoAMcZv8zhDYBkyRBYiH7k/signer_zGWc3p9F2RC6HVwc5UeAEg69ixA5NeS6PSbkZ5M37ca9h_session_zF1sJfNqXDfQ",
+          "signerId": "sealer_z5yb9jDoaerszMR83JhpYwjFoAMcZv8zhDYBkyRBYiH7k/signer_zGWc3p9F2RC6HVwc5UeAEg69ixA5NeS6PSbkZ5M37ca9h",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z5yb9jDoaerszMR83JhpYwjFoAMcZv8zhDYBkyRBYiH7k/signer_zGWc3p9F2RC6HVwc5UeAEg69ixA5NeS6PSbkZ5M37ca9h\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638389,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z3tc4cpMWXL7NECTJr_for_sealer_z5yb9jDoaerszMR83JhpYwjFoAMcZv8zhDYBkyRBYiH7k/signer_zGWc3p9F2RC6HVwc5UeAEg69ixA5NeS6PSbkZ5M37ca9h\\\",\\\"value\\\":\\\"sealed_UqrTOzfBEj8KXmAVxihkAiJwCGNt76qMSyPJ1DKT5kc2lfPFoy6Zg9gm0sfzpGQctgoFIRwElT8Ymqo_OvjowyutQWJUnD7xGnA==\\\"}]\",\"madeAt\":1783134638389,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z3tc4cpMWXL7NECTJr\\\"}]\",\"madeAt\":1783134638389,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"groupSealer\\\",\\\"value\\\":\\\"key_z3tc4cpMWXL7NECTJr@sealer_z7BfHHNbdKRE71q4Skhrzq3aCUgpKPmfxXoAJYsPiKqLR\\\"}]\",\"madeAt\":1783134638389,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_zQ1cMPdtvenpwD2GfWN3kiS36V1\\\",\\\"value\\\":\\\"manager\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z3tc4cpMWXL7NECTJr_for_co_zQ1cMPdtvenpwD2GfWN3kiS36V1\\\",\\\"value\\\":\\\"sealed_Uj065dbJcNuPo5aDnmAaJ2KNsvNID7NT6pYhS9Y-ONrQubJEhqQl1tVhr4BL_i2FcoJpWIIfie6YaXcZCvp73XJcEmLz6nqjDJQ==\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_zmoXpCD2Xzm8xxmZ4YcpdNdwaQf\\\",\\\"value\\\":\\\"writer\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z3tc4cpMWXL7NECTJr_for_co_zmoXpCD2Xzm8xxmZ4YcpdNdwaQf\\\",\\\"value\\\":\\\"sealed_UG8S4dYOCT4zD8x5y52TAo2G8V7vP-zprCAL0b30HaCYiTE-2ebME0ms_ctV3q2M2FO-in8Qm2nouTlYAEOhoahJQyTcMhsWd9Q==\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_zPsH7Fz5JUUxa5SQQibUy8MyXhT\\\",\\\"value\\\":\\\"writeOnly\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"writeKeyFor_co_zPsH7Fz5JUUxa5SQQibUy8MyXhT\\\",\\\"value\\\":\\\"key_z56G9J2vwdn1MW8A78\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z56G9J2vwdn1MW8A78_for_co_zPsH7Fz5JUUxa5SQQibUy8MyXhT\\\",\\\"value\\\":\\\"sealed_UE29VxiDQqWmVprWHe7-pwSpUqzgp4puAOBA7LU-L2CFesWAaydrHdnwPO8bXLq7mcM2goqgcFyIA2wkh_il6VMmurLjyHdbIeg==\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z56G9J2vwdn1MW8A78_for_sealer_z5yb9jDoaerszMR83JhpYwjFoAMcZv8zhDYBkyRBYiH7k/signer_zGWc3p9F2RC6HVwc5UeAEg69ixA5NeS6PSbkZ5M37ca9h\\\",\\\"value\\\":\\\"sealed_Uy91lTeQ201fDBWWhP9UDayj3vz1CyPKpT9YfzJtz2rxekYqTZPAZaeHe-rmdw0hg5w7B5xIfhHxBpb68rW21-zo87l-TDnFnEA==\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z56G9J2vwdn1MW8A78_for_co_zQ1cMPdtvenpwD2GfWN3kiS36V1\\\",\\\"value\\\":\\\"sealed_Uz23rjCO59gfeE2PufYXfAYLKYV675Cu-EWHYp-ejLCM6U2Nna0pXpN5FuWBkGjGZrt0eRQ6zURpQGOFiiKhFV8SPAPNc5jmi1Q==\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z56G9J2vwdn1MW8A78_for_co_zmoXpCD2Xzm8xxmZ4YcpdNdwaQf\\\",\\\"value\\\":\\\"sealed_UV_9BlRVCCahKrZCokISk5pFgi9DWU0BlEeyB2ZDzfqX0xCKp2FM5IEK0EbI3Q3GEvib4sSqBbRMvZtDOpyzYYCbrySEURRDqQA==\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"co_zLBuQMXfNTdAeHsY73vxFKL6w58\\\",\\\"value\\\":\\\"reader\\\"}]\",\"madeAt\":1783134638392,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z3tc4cpMWXL7NECTJr_for_co_zLBuQMXfNTdAeHsY73vxFKL6w58\\\",\\\"value\\\":\\\"sealed_UVxEdB8YYalgUlG_r-L3lUlUGQ4MYiqZD-SCDUN-0PG7fFvWDWcCT6F7p_6ydrdrxMVKK-1OQ-qHXJrVRYuL8fcAsRlL4HG55dA==\\\"}]\",\"madeAt\":1783134638392,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z56G9J2vwdn1MW8A78_for_co_zLBuQMXfNTdAeHsY73vxFKL6w58\\\",\\\"value\\\":\\\"sealed_U40H9SNp2hRmSKUNRKHZAuWSWI3PRYyJx0ehz6oLQV1r5IhoaNFJ19ft3W1Hgot0BgBd0XiyAuNFbk_VrWK5Jd-ZRUdj7ZXU6VQ==\\\"}]\",\"madeAt\":1783134638392,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z54iC7zd3srwqL6mLCa14DrzUruvAojkcm8EWtuttesRhwsrSLA6ENeeFEzgAZFgzUdReWyBq8WMNUNUEFW2MvZhC"
+        }
+      ]
+    },
+    {
+      "coId": "co_zQ1cMPdtvenpwD2GfWN3kiS36V1",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_zGueharG6XF1jT4ew86crkaDaPcVkp6E4KqzqU3GrJ2Pq/signer_zAT4DopCBHuzQumc8YY5DSLxP2CMnujKYFcjiRDdE113R\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zGueharG6XF1jT4ew86crkaDaPcVkp6E4KqzqU3GrJ2Pq/signer_zAT4DopCBHuzQumc8YY5DSLxP2CMnujKYFcjiRDdE113R_session_zVfSjeDyXaoP",
+          "signerId": "signer_zAT4DopCBHuzQumc8YY5DSLxP2CMnujKYFcjiRDdE113R",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zGueharG6XF1jT4ew86crkaDaPcVkp6E4KqzqU3GrJ2Pq/signer_zAT4DopCBHuzQumc8YY5DSLxP2CMnujKYFcjiRDdE113R\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638389,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z4XCqjNcfoDuRc4yzD_for_sealer_zGueharG6XF1jT4ew86crkaDaPcVkp6E4KqzqU3GrJ2Pq/signer_zAT4DopCBHuzQumc8YY5DSLxP2CMnujKYFcjiRDdE113R\\\",\\\"value\\\":\\\"sealed_UFEcIr0FLK7mZ6WihH7NAnm-MhrYUmDwBOAEXIlIarLV_mJurfDqh758wpXCKYj7rS7etS36lsJ-Es-aJYTTqYWdiateaBBZP\\\"}]\",\"madeAt\":1783134638389,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z4XCqjNcfoDuRc4yzD\\\"}]\",\"madeAt\":1783134638389,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z4NEhQArEkzewGuC3gSBvGGHX42N1FzRf7mV6s34zoxX2GdBNQAV21hsPKhw6CsXw1ck13T4g3XB4kC6LQXrMi2jP"
+        }
+      ]
+    },
+    {
+      "coId": "co_zmoXpCD2Xzm8xxmZ4YcpdNdwaQf",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_zGerFx8r558mkXqcGVqHpz1H1cQw9fDVnDmhEAcBNjiPW/signer_z3a42YFaTdxHNUupBQAcQ8pVu1X2Bx1Qe56S1AJDEGeFs\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zGerFx8r558mkXqcGVqHpz1H1cQw9fDVnDmhEAcBNjiPW/signer_z3a42YFaTdxHNUupBQAcQ8pVu1X2Bx1Qe56S1AJDEGeFs_session_zHgq6KfZy5wa",
+          "signerId": "signer_z3a42YFaTdxHNUupBQAcQ8pVu1X2Bx1Qe56S1AJDEGeFs",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zGerFx8r558mkXqcGVqHpz1H1cQw9fDVnDmhEAcBNjiPW/signer_z3a42YFaTdxHNUupBQAcQ8pVu1X2Bx1Qe56S1AJDEGeFs\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638390,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z5q3V4xbbQZc2FjVPf_for_sealer_zGerFx8r558mkXqcGVqHpz1H1cQw9fDVnDmhEAcBNjiPW/signer_z3a42YFaTdxHNUupBQAcQ8pVu1X2Bx1Qe56S1AJDEGeFs\\\",\\\"value\\\":\\\"sealed_UO3xb5KnO6JCwKYirDq_63Mdqj9FrkNbAjzPVhhkNHyx3OmEiTEMhTs-ZxuB-PFiZE1brd5CsqCOSPYYDDlbUdDNDTaosJUAR\\\"}]\",\"madeAt\":1783134638390,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z5q3V4xbbQZc2FjVPf\\\"}]\",\"madeAt\":1783134638390,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5AS4PhfeXpgUSKBCCC21Fcmx1VG57bWEpUQWhX3EG6keWCvQK8MiA5UdMcb2PZYbg3s5SJTB6jRravDue68E1Z3V"
+        }
+      ]
+    },
+    {
+      "coId": "co_zPsH7Fz5JUUxa5SQQibUy8MyXhT",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_zENCcqAHVujvMR3w7TYD5TsXAju1y8ydrxHYYXxDxiqRX/signer_zHZnA2VBvLEfSwJsfSxPjAs6Xbc6uJkkZMcSkyUHH2o7U\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zENCcqAHVujvMR3w7TYD5TsXAju1y8ydrxHYYXxDxiqRX/signer_zHZnA2VBvLEfSwJsfSxPjAs6Xbc6uJkkZMcSkyUHH2o7U_session_z4bEzQrFgyST",
+          "signerId": "signer_zHZnA2VBvLEfSwJsfSxPjAs6Xbc6uJkkZMcSkyUHH2o7U",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zENCcqAHVujvMR3w7TYD5TsXAju1y8ydrxHYYXxDxiqRX/signer_zHZnA2VBvLEfSwJsfSxPjAs6Xbc6uJkkZMcSkyUHH2o7U\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638390,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_zrrv5YshpvDyG1aBy_for_sealer_zENCcqAHVujvMR3w7TYD5TsXAju1y8ydrxHYYXxDxiqRX/signer_zHZnA2VBvLEfSwJsfSxPjAs6Xbc6uJkkZMcSkyUHH2o7U\\\",\\\"value\\\":\\\"sealed_UfOh9J59uDgi0O9XvLLUePuQBZPyJrgbKv7RT1L4suLyyfDvljCjZ4knDL5McyTJ1AVK8sjJ35MVSo6N01OBJYExwvtWS8lMOiw==\\\"}]\",\"madeAt\":1783134638390,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_zrrv5YshpvDyG1aBy\\\"}]\",\"madeAt\":1783134638390,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z2nyxuUgVAJPfjEHRbVdt1faPqTWBcmakYcQUBhAma4dRA9q31vZryzZK6W5SXszjaLNgHkc4xPAB38chn7Uv9463"
+        }
+      ]
+    },
+    {
+      "coId": "co_zLBuQMXfNTdAeHsY73vxFKL6w58",
+      "headerJson": "{\"createdAt\":null,\"meta\":{\"type\":\"account\"},\"ruleset\":{\"initialAdmin\":\"sealer_zAWSKE33wZVELnty19fXfXDkNSPiFY41AmMPBVvZJft8G/signer_z7cyN65zzefpvWUDimaByYYJaXT4rHCmBD8Ty6nKA5u6Q\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":null}",
+      "sessions": [
+        {
+          "sessionId": "sealer_zAWSKE33wZVELnty19fXfXDkNSPiFY41AmMPBVvZJft8G/signer_z7cyN65zzefpvWUDimaByYYJaXT4rHCmBD8Ty6nKA5u6Q_session_zNUNKLKeJXE1",
+          "signerId": "signer_z7cyN65zzefpvWUDimaByYYJaXT4rHCmBD8Ty6nKA5u6Q",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_zAWSKE33wZVELnty19fXfXDkNSPiFY41AmMPBVvZJft8G/signer_z7cyN65zzefpvWUDimaByYYJaXT4rHCmBD8Ty6nKA5u6Q\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1783134638390,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z5LxkvF6tmyxyiaXVD_for_sealer_zAWSKE33wZVELnty19fXfXDkNSPiFY41AmMPBVvZJft8G/signer_z7cyN65zzefpvWUDimaByYYJaXT4rHCmBD8Ty6nKA5u6Q\\\",\\\"value\\\":\\\"sealed_U75-dnLBj2cinh2DLI4De84mJ6Zo9heeIlNihdJjQUlBDjlfAk3RHbhg3w8rXkUgY8DkAJ1uY0LdWDrZjUZDx9opLRscwss3EXQ==\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z5LxkvF6tmyxyiaXVD\\\"}]\",\"madeAt\":1783134638391,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_zs7ucecd6rQAzdg64T1XWkoSaPeyhiRAbdSBPY1mPpVwbRPZcVu79ngY4n2J69mKpP4camMKUFPuKZDUgmJY3vUL"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_z4kPxjimAd1xegGzWpdqHeFy9Rk": [
+      {
+        "sessionId": "sealer_z5yb9jDoaerszMR83JhpYwjFoAMcZv8zhDYBkyRBYiH7k/signer_zGWc3p9F2RC6HVwc5UeAEg69ixA5NeS6PSbkZ5M37ca9h_session_zF1sJfNqXDfQ",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "co_zQ1cMPdtvenpwD2GfWN3kiS36V1_session_zJN7X1Tq5qsz",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "co_zmoXpCD2Xzm8xxmZ4YcpdNdwaQf_session_zDM4FYHau6E6",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "co_zPsH7Fz5JUUxa5SQQibUy8MyXhT_session_zLHDfvT8PSyr",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "co_zLBuQMXfNTdAeHsY73vxFKL6w58_session_z4zesBEdyiY9",
+        "txIndex": 0,
+        "valid": false,
+        "reason": "Transactor has no write permissions",
+        "outcome": "invalid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "sealer_zH8isoin3PM1doax6EDc1rb6izZeaUPsSHG11fXbJG2ED/signer_z5CfF6NtSodZo68o7Kv54rticJBk5cWvQRvY7PeQyQpHf_session_zacxiLzVTNH8",
+        "txIndex": 0,
+        "valid": false,
+        "reason": "Transactor has no write permissions",
+        "outcome": "invalid",
+        "metaJson": null
+      }
+    ]
+  },
+  "roleQueries": [
+    {
+      "groupId": "co_zA7PwcGBWdugwzgvwLCnxjcP1KS",
+      "member": "co_zQ1cMPdtvenpwD2GfWN3kiS36V1",
+      "atTime": null,
+      "expectedRole": "manager"
+    },
+    {
+      "groupId": "co_zA7PwcGBWdugwzgvwLCnxjcP1KS",
+      "member": "co_zmoXpCD2Xzm8xxmZ4YcpdNdwaQf",
+      "atTime": null,
+      "expectedRole": "writer"
+    },
+    {
+      "groupId": "co_zA7PwcGBWdugwzgvwLCnxjcP1KS",
+      "member": "co_zPsH7Fz5JUUxa5SQQibUy8MyXhT",
+      "atTime": null,
+      "expectedRole": "writeOnly"
+    },
+    {
+      "groupId": "co_zA7PwcGBWdugwzgvwLCnxjcP1KS",
+      "member": "co_zLBuQMXfNTdAeHsY73vxFKL6w58",
+      "atTime": null,
+      "expectedRole": "reader"
+    },
+    {
+      "groupId": "co_zA7PwcGBWdugwzgvwLCnxjcP1KS",
+      "member": "sealer_zH8isoin3PM1doax6EDc1rb6izZeaUPsSHG11fXbJG2ED/signer_z5CfF6NtSodZo68o7Kv54rticJBk5cWvQRvY7PeQyQpHf",
+      "atTime": null,
+      "expectedRole": null
+    }
+  ]
+}

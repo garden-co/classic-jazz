@@ -176,6 +176,13 @@ describe("client with storage syncs with server", () => {
 
     const loadedValue = await loadCoValueOrFail(client.node, map.id);
 
+    // `map` is a plain (non-group) coMap, so its content is fed by the native
+    // materializer (R3 stage-2b), which never populates the TS-only
+    // `verifiedTransactions` introspection array (this transaction has no
+    // `changes` anyway, so it produces no coMap op either way). Trigger the
+    // lazy TS-side load explicitly to inspect the raw parsed meta.
+    loadedValue.core.getValidTransactions();
+
     expect(loadedValue.core.verifiedTransactions[0]?.tx.meta).toBe(
       `{"meta":true}`,
     );

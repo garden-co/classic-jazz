@@ -1,0 +1,95 @@
+{
+  "description": "a branch with two same-madeAt transactions merged into its owned source map. The merged transactions carry sourceMadeAt + sourceTxId (source identity), and TS compareTransactions tie-breaks equal-madeAt / same-source-session transactions by source txIndex. All transactions are valid (authored by the admin), so verdicts are pinned as a multiset. GAP for the Rust port: a tie where the two transactions share a SOURCE session but land in DIFFERENT CURRENT sessions (so TS orders by source txIndex while a current-(session,txIndex) tie-break would diverge — porter note 9) cannot be produced through the public branch/merge APIs, because a single merge writes every merged transaction into one merger session. This fixture exercises the source-identity computation but not that cross-current-session divergence.",
+  "covalues": [
+    {
+      "coId": "co_zSKK5oFqS8LcD3Rj14nYJQf5S6B",
+      "headerJson": "{\"createdAt\":\"2023-11-14T22:13:20.000Z\",\"meta\":null,\"ruleset\":{\"group\":\"co_zQRoiJcPP4nRGqf8bnMWoxYJkZH\",\"type\":\"ownedByGroup\"},\"type\":\"comap\",\"uniqueness\":\"z18K7du8tHVS4vyHV\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr",
+          "signerId": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"base\\\",\\\"value\\\":\\\"v\\\"}]\",\"madeAt\":1700000000000,\"privacy\":\"trusting\"}",
+            "{\"encryptedChanges\":\"encrypted_UScM=\",\"keyUsed\":\"key_z4r9zpMyVb3UmkMsj2\",\"madeAt\":1700000000000,\"meta\":\"encrypted_UabzN0ZTnGU2fco6emA5notneWbzSYu5ywLsMArRpl5FKh-jfYC0E5W0KqoG7zkcUlpqUA5z44Cv6o-g6fTSHX7NxJVPxTw==\",\"privacy\":\"private\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"k1\\\",\\\"value\\\":\\\"a\\\"}]\",\"madeAt\":1700000020000,\"meta\":\"{\\\"mi\\\":1,\\\"t\\\":10000,\\\"s\\\":\\\"sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr\\\",\\\"b\\\":\\\"co_z2gMhtMhLPB2w6nH1DddxM2RhJh\\\"}\",\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"k2\\\",\\\"value\\\":\\\"b\\\"}]\",\"madeAt\":1700000020000,\"meta\":\"{\\\"mi\\\":2}\",\"privacy\":\"trusting\"}",
+            "{\"encryptedChanges\":\"encrypted_Ug1E=\",\"keyUsed\":\"key_z4r9zpMyVb3UmkMsj2\",\"madeAt\":1700000020000,\"meta\":\"encrypted_Uoy5dHDAvsum5kf_t3UE2t9SOODyZ6JBRP92KZo2OZhi698hZ2OumeWkj8QXW7jpPHteg9okF6UAmY-pDVn7fzB0zb36QCgo7YDtgDxg7CSSO_2HravgnEU3mxvxTCWtVVTzS1hgJZohgz_dYxkwH6hjEooni91IEBKQKjxukVHPx1W9wD1dnw7kxDZ3iN_P_No4OHXakKXjbz6F4yNQPuQ39bSIpYWD72180hqjU6kXibkLZZqZ8TeM=\",\"privacy\":\"private\"}"
+          ],
+          "lastSignature": "signature_z4BTmbKGvbxF4M6Np7UVZz7fVodCcZFK32FhDGrDtxYkTKW9LgBv13C3uQxasYrqCboFEVU1fZfsxjUxfxPaHWRC5"
+        }
+      ]
+    },
+    {
+      "coId": "co_zQRoiJcPP4nRGqf8bnMWoxYJkZH",
+      "headerJson": "{\"createdAt\":\"2023-11-14T22:13:20.000Z\",\"meta\":null,\"ruleset\":{\"initialAdmin\":\"sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER\",\"type\":\"group\"},\"type\":\"comap\",\"uniqueness\":\"z4iWrP7TJiwHuQ8Pba\"}",
+      "sessions": [
+        {
+          "sessionId": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr",
+          "signerId": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER",
+          "transactions": [
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER\\\",\\\"value\\\":\\\"admin\\\"}]\",\"madeAt\":1700000000000,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"key_z4r9zpMyVb3UmkMsj2_for_sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER\\\",\\\"value\\\":\\\"sealed_UoH680PPjJhyOIDw6uwEr7ukirT3fgTZJ2GWFZqjDwtmdN_deB4aaCnbilYTYhvMccJhCImdMqkCzuzoEj1ZaPE5VOY4lqU4u6w==\\\"}]\",\"madeAt\":1700000000000,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"readKey\\\",\\\"value\\\":\\\"key_z4r9zpMyVb3UmkMsj2\\\"}]\",\"madeAt\":1700000000000,\"privacy\":\"trusting\"}",
+            "{\"changes\":\"[{\\\"op\\\":\\\"set\\\",\\\"key\\\":\\\"groupSealer\\\",\\\"value\\\":\\\"key_z4r9zpMyVb3UmkMsj2@sealer_zJCBPnGtoWRWoA7L3gJr26887TWBqNVXwkj6iYUW5AbUZ\\\"}]\",\"madeAt\":1700000000000,\"privacy\":\"trusting\"}"
+          ],
+          "lastSignature": "signature_z5SvAWrTgsoZM713jRAdRCvtPW6zMBGAFKPpoosv2HFp9mGvecyk852Xh5zEJHLUrz47mV8bcy6UEsMJY2FJU1Q7Z"
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "co_zSKK5oFqS8LcD3Rj14nYJQf5S6B": [
+      {
+        "sessionId": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr",
+        "txIndex": 0,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": null
+      },
+      {
+        "sessionId": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr",
+        "txIndex": 1,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": "{\"branch\":\"feature-branch\",\"ownerId\":\"co_zQRoiJcPP4nRGqf8bnMWoxYJkZH\"}"
+      },
+      {
+        "sessionId": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr",
+        "txIndex": 2,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "sourceMadeAt": 1700000010000,
+        "sourceTxId": {
+          "sessionID": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr",
+          "txIndex": 1
+        },
+        "metaJson": "{\"mi\":1,\"t\":10000,\"s\":\"sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr\",\"b\":\"co_z2gMhtMhLPB2w6nH1DddxM2RhJh\"}"
+      },
+      {
+        "sessionId": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr",
+        "txIndex": 3,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "sourceMadeAt": 1700000010000,
+        "sourceTxId": {
+          "sessionID": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr",
+          "txIndex": 2
+        },
+        "metaJson": "{\"mi\":2}"
+      },
+      {
+        "sessionId": "sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr",
+        "txIndex": 4,
+        "valid": true,
+        "reason": null,
+        "outcome": "valid",
+        "metaJson": "{\"merged\":{\"sealer_z7qVu4uZan1wyoYyxH2CCq82ubQZfeRMgyAtQQjtGMjn6/signer_zHNU5nLz68xCriKxGw5NPW8mJT75mDYNSZfghdk729fER_session_zRRaQY3Uonxr\":3},\"branch\":\"co_z2gMhtMhLPB2w6nH1DddxM2RhJh\"}"
+      }
+    ]
+  },
+  "roleQueries": []
+}

@@ -11,9 +11,12 @@ import {
   Hash,
   KeyID,
   KeySecret,
+  NodeCoreIngestOutcome,
+  NodeCorePendingTx,
   Signature,
   SignerID,
 } from "../crypto/crypto.js";
+import type { RawCoMap } from "../coValues/coMap.js";
 import {
   AgentID,
   isDeleteSessionID,
@@ -55,7 +58,7 @@ import {
   emptyKnownState,
   KnownStateSessions,
 } from "../knownState.js";
-import { safeParseJSON } from "../jsonStringify.js";
+import { safeParseJSON, stableStringify } from "../jsonStringify.js";
 
 export function idforHeader(
   header: CoValueHeader,
@@ -69,6 +72,22 @@ let logPermissionErrors = false;
 
 export function enablePermissionErrors() {
   logPermissionErrors = true;
+}
+
+// The native coMap materialization path (rich per-op delta pulled on every
+// ingest) is measured SLOWER than the TS path on cold-build/ingest shapes —
+// the delta transfer cost exceeds the JS materialization it replaces (see
+// docs/superpowers/specs/2026-07-04-covaluecore-in-rust.md, R3 stage 2b
+// yardstick: INGEST ~0.4x vs main). Off by default until a cheaper transfer
+// (e.g. lazy per-key reads deferring full history) closes that gap.
+let nativeCoMapMaterializationEnabled = false;
+
+export function enableNativeCoMapMaterialization() {
+  nativeCoMapMaterializationEnabled = true;
+}
+
+export function disableNativeCoMapMaterialization() {
+  nativeCoMapMaterializationEnabled = false;
 }
 
 export class VerifiedTransaction {
@@ -231,6 +250,11 @@ export type DecryptedTransaction = Omit<VerifiedTransaction, "changes"> & {
 };
 
 export type AvailableCoValueCore = CoValueCore & { verified: VerifiedState };
+
+/** Shared empty `pending` array for the native coMap fast path (plain,
+ * non-branched coMaps carry no per-tx merge/branch/private-meta extras — native
+ * decrypts private meta itself via its key store). */
+const EMPTY_NODE_CORE_PENDING: NodeCorePendingTx[] = [];
 
 export class CoValueCore {
   // context
@@ -586,11 +610,18 @@ export class CoValueCore {
       );
     }
 
+    // The native coMap view is (re)created fresh by `new VerifiedState` below
+    // (its constructor calls `nodeCore.createCoValue`), so its version restarts
+    // at 0 — realign the delta cursor so the first materialization is a full
+    // build.
+    this.coMapViewVersion = 0;
+
     // Create VerifiedState - Rust validates uniqueness and id match unless skipVerify is true
     try {
       this._verified = new VerifiedState(
         this.id,
         this.node.crypto,
+        this.node.nodeCore,
         header,
         streamingKnownState,
         skipVerify,
@@ -898,22 +929,61 @@ export class CoValueCore {
     }
 
     try {
-      this.verified.tryAddTransactions(
-        sessionID,
-        signerID,
-        newTransactions,
-        newSignature,
-        skipVerify,
-      );
+      if (this.isNativeCoMap()) {
+        if (this._cachedContent) {
+          // A reader is subscribed: single-crossing native ingest (add +
+          // validate + materialize + rich delta in one FFI call) and push the
+          // delta into the cached content. The raw log is written even when
+          // validation defers on a missing group, so sync/storage stay correct.
+          this.ingestNativeCoMap(
+            sessionID,
+            signerID,
+            newTransactions,
+            newSignature,
+            skipVerify,
+          );
+        } else {
+          // No reader yet: only append to the raw log (what sync/storage read).
+          // Materialization is deferred to the first `getCurrentContent`, exactly
+          // as the TS path defers `processNewTransactions` when `_cachedContent`
+          // is absent — this keeps streaming/sync ingestion O(new) per chunk and
+          // avoids materializing coValues that are never read. (Verified:
+          // eagerly routing through `ingestAndMaterialize` here computes and
+          // discards a full rich delta that nobody reads, then the eventual
+          // first `getCurrentContent` pulls the SAME full delta again — pure
+          // duplicated cost. Confirmed by direct profiling.)
+          this.verified.tryAddTransactions(
+            sessionID,
+            signerID,
+            newTransactions,
+            newSignature,
+            skipVerify,
+          );
+        }
+        this.#trackNativeTxMadeAt(newTransactions);
 
-      // Mark deleted state when a delete marker transaction is accepted.
-      // - In skipVerify mode (storage shards), we accept + mark without permission checks.
-      // - In verify mode, we only reach here if the delete permission check passed.
-      if (isDeleteTransaction.value) {
-        this.#markAsDeleted();
+        // Mark deleted state when a delete marker transaction is accepted.
+        if (isDeleteTransaction.value) {
+          this.#markAsDeleted();
+        }
+      } else {
+        this.verified.tryAddTransactions(
+          sessionID,
+          signerID,
+          newTransactions,
+          newSignature,
+          skipVerify,
+        );
+
+        // Mark deleted state when a delete marker transaction is accepted.
+        // - In skipVerify mode (storage shards), we accept + mark without permission checks.
+        // - In verify mode, we only reach here if the delete permission check passed.
+        if (isDeleteTransaction.value) {
+          this.#markAsDeleted();
+        }
+
+        this.processNewTransactions();
       }
-
-      this.processNewTransactions();
       this.scheduleNotifyUpdate();
       this.invalidateDependants();
     } catch (e) {
@@ -1016,8 +1086,240 @@ export class CoValueCore {
   }
 
   private processNewTransactions() {
+    if (this.isNativeCoMap()) {
+      // Native path: re-materialize the Rust-resident view (the transactions are
+      // already in the native log) and push the rich delta into the cached
+      // content. Used by local writes (`makeTransaction`); the sync receive path
+      // (`tryAddTransactions`) takes the single-crossing `ingestNativeCoMap`
+      // route instead.
+      this.materializeNativeCoMap(this._cachedContent as RawCoMap | undefined);
+      return;
+    }
     if (this._cachedContent) {
       this._cachedContent.processNewTransactions();
+    }
+  }
+
+  // ── Native coMap materialization (R3 stage-2b) ──────────────────────────────
+  //
+  // Cursor into the native coMap view's monotonic version. Advances on every
+  // native materialization; a `RawCoMap` passes it as `sinceVersion` on its next
+  // rich-delta pull so the delta stays O(changed keys). Reset in lockstep with
+  // the native view whenever `removeVerifiedContent` drops the covalue.
+  coMapViewVersion = 0;
+
+  /**
+   * Whether this covalue's coMap content is fed by the native materializer. True
+   * for a plain `comap` (non-`group` ruleset) that is NOT branched, on a binding
+   * exposing the stage-2b surface. Groups/accounts (`ruleset === "group"`) and
+   * branched coMaps stay on the TS `getValidTransactions` path.
+   */
+  isNativeCoMap(): this is AvailableCoValueCore {
+    const verified = this._verified;
+    return (
+      nativeCoMapMaterializationEnabled &&
+      !!verified &&
+      verified.header.type === "comap" &&
+      verified.header.ruleset.type !== "group" &&
+      !this.isBranched() &&
+      this.node.nodeCore.supportsNativeCoMapMaterialization()
+    );
+  }
+
+  /**
+   * Resolve every read key the native view still needs (a private tx used a key
+   * not yet in the native store) and feed it across. Returns whether any secret
+   * was newly provided (i.e. a re-materialization is worthwhile).
+   */
+  #provideMissingCoMapKeys(): boolean {
+    if (!this.verified) return false;
+    const missing = this.node.nodeCore.missingKeyIds(this.id);
+    let provided = false;
+    for (const keyId of missing) {
+      const secret = this.getReadKey(keyId as KeyID);
+      if (secret) {
+        this.node.nodeCore.provideKeySecret(keyId, secret);
+        provided = true;
+      }
+    }
+    return provided;
+  }
+
+  /**
+   * (Re)materialize the native coMap view against the already-ingested log,
+   * resolving any missing private keys, then push the rich delta since
+   * {@link coMapViewVersion} into `content`. Used by local writes and by
+   * `resetParsedTransactions` (permission changes) — cases where the native log
+   * already holds the transactions and only the view needs refreshing.
+   */
+  private materializeNativeCoMap(content: RawCoMap | undefined): void {
+    const nodeCore = this.node.nodeCore;
+    const sinceVersion = this.coMapViewVersion;
+    nodeCore.mapMaterialize(this.id, EMPTY_NODE_CORE_PENDING);
+    if (this.#provideMissingCoMapKeys()) {
+      nodeCore.mapMaterialize(this.id, EMPTY_NODE_CORE_PENDING);
+    }
+    const delta = JSON.parse(nodeCore.mapDeltaRich(this.id, sinceVersion)) as {
+      version: number;
+      reset: boolean;
+      changedKeys: Record<string, never>;
+    };
+    this.coMapViewVersion = delta.version;
+    content?.consumeNativeDelta(delta as never);
+  }
+
+  /**
+   * Build a fresh `RawCoMap`'s `ops`/`latest` from the native view. Pulls the
+   * FULL delta (since version 0 → `reset`), so it does not depend on
+   * {@link coMapViewVersion}; it also advances that cursor to the native view's
+   * current version so subsequent incremental pushes stay O(changed keys).
+   */
+  materializeNativeCoMapContent(content: RawCoMap): void {
+    const nodeCore = this.node.nodeCore;
+    nodeCore.mapMaterialize(this.id, EMPTY_NODE_CORE_PENDING);
+    if (this.#provideMissingCoMapKeys()) {
+      nodeCore.mapMaterialize(this.id, EMPTY_NODE_CORE_PENDING);
+    }
+    const delta = JSON.parse(nodeCore.mapDeltaRich(this.id, 0)) as {
+      version: number;
+      reset: boolean;
+      changedKeys: Record<string, never>;
+    };
+    this.coMapViewVersion = delta.version;
+    content.consumeNativeDelta(delta as never);
+  }
+
+  /**
+   * Single-crossing native ingest of a received content chunk (sync path):
+   * `ingestAndMaterialize` adds the transactions to the raw log, validates them
+   * in-crate, and materializes the view in ONE FFI call, returning the compact
+   * outcome + rich delta. Advances the validation cursor from the outcome (no
+   * `validateTransactionsDelta` round-trip), resolves any missing private keys
+   * (re-pulling the delta if a key arrived), and pushes the delta into the
+   * cached content. Returns `false` if a dependency (the owning group) is not
+   * loaded yet — the raw log was still written, so the covalue re-materializes
+   * when the group arrives via `invalidateDependants` → `resetParsedTransactions`.
+   */
+  private ingestNativeCoMap(
+    sessionID: SessionID,
+    signerID: SignerID | undefined,
+    newTransactions: Transaction[],
+    newSignature: Signature,
+    skipVerify: boolean,
+  ): boolean {
+    const nodeCore = this.node.nodeCore;
+    const sinceVersion = this.coMapViewVersion;
+    // `ingestAndMaterialize` couples the raw-log add with validation +
+    // materialization: it writes the log FIRST, then validates/materializes.
+    // A materialize-stage error (e.g. the owning group isn't loaded during
+    // streaming) must NOT be reported as an add failure — the log was written
+    // and sync/storage must advance, exactly as the TS path's `add` succeeds
+    // even when lazy validation would later defer. So we snapshot the session's
+    // tx count and, on error, distinguish a genuine add failure (count
+    // unchanged → rethrow → `InvalidSignature`) from a deferred materialization
+    // (count advanced → swallow, catch up on the next materialize).
+    const priorCount = nodeCore.getTransactionCount(this.id, sessionID);
+    let outcome: NodeCoreIngestOutcome;
+    try {
+      outcome = nodeCore.ingestAndMaterialize(
+        this.id,
+        sessionID,
+        signerID,
+        JSON.stringify(newTransactions),
+        newSignature,
+        skipVerify,
+        sinceVersion,
+        EMPTY_NODE_CORE_PENDING,
+      );
+    } catch (e) {
+      const addedCount = nodeCore.getTransactionCount(this.id, sessionID);
+      if (addedCount < priorCount + newTransactions.length) {
+        // The add itself failed (bad signature / malformed / deleted covalue):
+        // nothing was written — propagate so the chunk is rejected.
+        throw e;
+      }
+      // The add succeeded; only validation/materialization deferred. Perform
+      // the TS-side session-log/known-state cache bookkeeping the bypassed
+      // `verified.tryAddTransactions` would have done, then arm the canonical
+      // missing-dependency waiter — the view catches up when the owning group
+      // loads (its `invalidateDependants` reaches this dependant, registered
+      // from the header, via `resetParsedTransactions`).
+      this.verified?.noteTransactionsAdded(
+        sessionID,
+        signerID,
+        newTransactions,
+        newSignature,
+      );
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.startsWith("CoValue not loaded: ")) {
+        const missingId = message.slice(
+          "CoValue not loaded: ".length,
+        ) as RawCoID;
+        this.node.expectCoValueLoaded(
+          missingId,
+          "Determining valid transaction in owned object but its group wasn't loaded",
+        );
+      }
+      return false;
+    }
+
+    // TS-side cache bookkeeping for the bypassed `verified.tryAddTransactions`
+    // (session-log cache append + known-state invalidation) — without it,
+    // `knownState()`/`newContentSince` serve stale data and sync stalls.
+    this.verified?.noteTransactionsAdded(
+      sessionID,
+      signerID,
+      newTransactions,
+      newSignature,
+    );
+
+    // NOTE: deliberately NOT touching `this.validationCursor` here. That cursor
+    // is exclusively owned by the TS `getValidTransactions`/
+    // `determineValidTransactionsNative` reconciliation loop, which advances it
+    // in lockstep with `toValidateTransactions`/`verifiedTransactions` (mark
+    // verdicts, THEN advance the cursor). The native fast path never populates
+    // those TS structures — it materializes the view directly — so if it also
+    // advanced the SHARED cursor, a later FIRST-EVER `getValidTransactions()`
+    // call on this covalue (rare, but public API: test fixtures, a native map
+    // used as a branch's source, etc.) would see a cursor already "caught up"
+    // and a generation-stable delta would return an EMPTY tail, leaving the
+    // freshly-loaded `toValidateTransactions` entirely unmarked. Leaving the
+    // cursor untouched means such a call always starts from whatever TS last
+    // synchronized to (or `undefined` → full reconciliation) and is therefore
+    // always correct, just potentially doing a fuller catch-up pass on that
+    // first call — the native engine's own verdict list is monotonic, so the
+    // delta protocol's generation-stable/reset cases both still apply cleanly
+    // regardless of how many native-only ingests happened in between.
+    let deltaJson = outcome.deltaJson;
+    let viewVersion = outcome.viewVersion;
+    if (this.#provideMissingCoMapKeys()) {
+      // A private tx's key just arrived — re-materialize and re-pull the delta
+      // (still since the pre-ingest cursor, so nothing is missed).
+      viewVersion = nodeCore.mapMaterialize(this.id, EMPTY_NODE_CORE_PENDING);
+      deltaJson = nodeCore.mapDeltaRich(this.id, sinceVersion);
+    }
+    void viewVersion;
+
+    const delta = JSON.parse(deltaJson) as {
+      version: number;
+      reset: boolean;
+      changedKeys: Record<string, never>;
+    };
+    this.coMapViewVersion = delta.version;
+    (this._cachedContent as RawCoMap | undefined)?.consumeNativeDelta(
+      delta as never,
+    );
+    return true;
+  }
+
+  /** Update `earliest`/`latestTxMadeAt` from a batch of raw wire transactions —
+   * the native path skips `VerifiedTransaction` wrapping (where the TS path
+   * derives these), but `CoValueBase.createdAt`/`lastUpdatedAt` still read them.
+   * Safe for the non-branched native path: no merge meta reorders `madeAt`. */
+  #trackNativeTxMadeAt(newTransactions: Transaction[]): void {
+    for (const tx of newTransactions) {
+      if (tx.madeAt > this.latestTxMadeAt) this.latestTxMadeAt = tx.madeAt;
+      if (tx.madeAt < this.earliestTxMadeAt) this.earliestTxMadeAt = tx.madeAt;
     }
   }
 
@@ -1228,6 +1530,13 @@ export class CoValueCore {
         meta,
         madeAt ?? this.node.stampNow(),
       );
+
+      // Native path: hand the write key to the native store up front so the
+      // materialization triggered by `processNewTransactions` can decrypt this
+      // just-written private tx without a missing-key re-materialize round-trip.
+      if (this.isNativeCoMap()) {
+        this.node.nodeCore.provideKeySecret(keyID, keySecret);
+      }
     } else {
       result = this.verified.makeNewTrustingTransaction(
         sessionID,
@@ -1315,7 +1624,90 @@ export class CoValueCore {
 
   // Reset the parsed transactions and branches, to validate them again from scratch when the group is updated
   resetParsedTransactions() {
-    const verifiedTransactions = this.verifiedTransactions;
+    // Drop the native validation engine cache for this CoValue in lockstep with
+    // the TS re-parse: the engine cache is keyed only by per-session tx counts,
+    // so pending changes (e.g. late-decrypted private meta) require an explicit
+    // reset here — the one place TS re-derives validity.
+    this.node.nodeCore.resetValidation(this.id);
+    // Drop the delta cursor in the SAME breath: dropping the engine restarts its
+    // generation, so a surviving cursor could spuriously "match" a rebuilt-but-
+    // changed verdict prefix and skip re-applying flips. Clearing it forces the
+    // next pass to take the full verdict set (see `validationCursor`).
+    this.validationCursor = undefined;
+
+    // Native coMap content is built EAGERLY (`RawCoMap`'s constructor
+    // materializes directly from the native view, never touching
+    // `getValidTransactions`/`verifiedTransactions`), unlike the TS path whose
+    // `_cachedContent` only exists after something called `getCurrentContent`
+    // AND whose `verifiedTransactions` only populates via an explicit
+    // `getValidTransactions` call. So for a native coMap whose TS-side
+    // `verifiedTransactions` was NEVER loaded (the common case — nothing calls
+    // `getValidTransactions` on the hot path anymore), the classic block below
+    // would incorrectly no-op (its `verifiedTransactions.length === 0` guard)
+    // even though `_cachedContent` exists and needs refreshing. Handle that
+    // case here, directly against the native view; if `verifiedTransactions`
+    // WAS loaded (some caller used the public `getValidTransactions` API
+    // directly, e.g. as a branch's merge source), fall through to the classic
+    // block so any live `VerifiedTransaction` references it handed out are
+    // still correctly re-marked (its `rebuildFromCore()` call already handles
+    // native content refresh correctly, via `RawCoMap.rebuildFromCore`'s own
+    // native branch).
+    // Check the PRIVATE backing field, not the public `verifiedTransactions`
+    // getter — the getter self-heals (see its doc comment) by running a full
+    // TS parse when empty, which would defeat this very fast path (turning
+    // every native-map reset into a full TS reconciliation).
+    if (this.isNativeCoMap() && this.#verifiedTransactionsStore.length === 0) {
+      const content = this._cachedContent as RawCoMap | undefined;
+      const nodeCore = this.node.nodeCore;
+      if (content) {
+        // `resetValidation` unconditionally dropped the native view (per
+        // `NodeCore::reset_validation`), so it must be rebuilt from scratch
+        // regardless of whether anything is actually observably different
+        // (e.g. this covalue's OWN permission change, where the author already
+        // had every key needed). Rebuild it WITHOUT touching `content` yet, so
+        // we can compare against the prior resolved snapshot before deciding
+        // whether a full `rebuildFromCore()` (bumps `version`, matches the TS
+        // classic block's "only when validity changed" contract) is
+        // warranted.
+        const before = stableStringify(content.toJSON());
+        let freshVersion = nodeCore.mapMaterialize(
+          this.id,
+          EMPTY_NODE_CORE_PENDING,
+        );
+        if (this.#provideMissingCoMapKeys()) {
+          freshVersion = nodeCore.mapMaterialize(
+            this.id,
+            EMPTY_NODE_CORE_PENDING,
+          );
+        }
+        const after = stableStringify(
+          JSON.parse(nodeCore.mapSnapshot(this.id)),
+        );
+        if (before !== after) {
+          content.rebuildFromCore();
+        } else {
+          // Nothing observable changed — leave `content` untouched (no version
+          // bump, no notify-worthy delta), but realign the cursor to the
+          // freshly-rebuilt view's actual version so the NEXT real change
+          // isn't filtered out against a now-stale (too-high) cursor.
+          this.coMapViewVersion = freshVersion;
+        }
+      } else {
+        // No cached content to refresh yet; just realign the cursor so the
+        // next natural materialize (on first `getCurrentContent`) is a full
+        // build rather than spuriously filtered against a stale cursor.
+        this.coMapViewVersion = 0;
+      }
+      this.scheduleNotifyUpdate();
+      return;
+    }
+
+    // Internal bookkeeping: read the backing field directly (never the
+    // self-healing public getter) — this method IS the "already loaded" path,
+    // so there's nothing to heal, and going through the getter here risks
+    // reentrant self-heals if ever called before the native fast-path branch
+    // above has run.
+    const verifiedTransactions = this.#verifiedTransactionsStore;
 
     if (verifiedTransactions.length === 0) {
       return;
@@ -1326,7 +1718,7 @@ export class CoValueCore {
 
     // Store the validity of the transactions before resetting the parsed transactions
     const validityBeforeReset = new Array<boolean>(verifiedTransactions.length);
-    this.verifiedTransactions.forEach((transaction, index) => {
+    verifiedTransactions.forEach((transaction, index) => {
       transaction.markAsToValidate();
       validityBeforeReset[index] = transaction.isValidTransactionWithChanges();
     });
@@ -1353,8 +1745,55 @@ export class CoValueCore {
     this.scheduleNotifyUpdate();
   }
 
-  verifiedTransactions: VerifiedTransaction[] = [];
+  #verifiedTransactionsStore: VerifiedTransaction[] = [];
+  #syncingNativeVerifiedTransactions = false;
+
+  /**
+   * The TS-only per-transaction introspection array (`getValidTransactions`'s
+   * source of truth, and what jazz-tools' inspector utilities and various
+   * tests read directly). For a native-gated coMap this normally stays
+   * UNPOPULATED — its content is fed straight from the native materializer
+   * without ever touching this array — so this getter SELF-HEALS: on first
+   * access (this array still empty) it runs the TS parse pipeline once,
+   * exactly what {@link getMergeCommits} and {@link hasBranch} already do for
+   * their own derived fields. The `#syncingNativeVerifiedTransactions` guard
+   * prevents reentrancy, since `parseNewTransactions` populates this SAME
+   * array via `.push()` (through this getter) as it runs.
+   */
+  get verifiedTransactions(): VerifiedTransaction[] {
+    // Re-sync on EVERY access, not just when the store is still empty: a
+    // native-gated coMap's fast paths (local writes, sync receive) never keep
+    // this array current, so a caller who read it once (populating it) and
+    // then triggers ANOTHER write would otherwise see a permanently-STALE
+    // snapshot from the first access. `parseNewTransactions` /
+    // `loadVerifiedTransactionsFromLogs` are cheap to re-call when there is
+    // nothing new (their own per-session `verifiedTransactionsKnownSessions`
+    // cursor makes it an O(sessions) no-op), so this is safe to do
+    // unconditionally for a native coMap.
+    if (!this.#syncingNativeVerifiedTransactions && this.isNativeCoMap()) {
+      this.#syncingNativeVerifiedTransactions = true;
+      try {
+        this.parseNewTransactions(false);
+      } finally {
+        this.#syncingNativeVerifiedTransactions = false;
+      }
+    }
+    return this.#verifiedTransactionsStore;
+  }
+
   toValidateTransactions: VerifiedTransaction[] = [];
+
+  /**
+   * Cursor into the native validation engine's verdict list for the delta
+   * protocol (see `determineValidTransactionsNative` in permissions.ts):
+   * `generation` is the engine's last-seen full-recompute generation, `count`
+   * the number of verdicts already applied. Kept per-CoValueCore (its lifetime
+   * matches this object's, NOT the shared nodeCore) and cleared in
+   * `resetParsedTransactions` — in lockstep with the `resetValidation` that drops
+   * the native engine — so a generation match never coincides with a stale-but-
+   * changed verdict prefix. `undefined` = no cursor → next pass gets the full set.
+   */
+  validationCursor: { generation: number; count: number } | undefined;
   toDecryptTransactions: VerifiedTransaction[] = [];
   toParseMetaTransactions: VerifiedTransaction[] = [];
   toProcessTransactions: VerifiedTransaction[] = [];
@@ -1424,7 +1863,12 @@ export class CoValueCore {
           this.earliestTxMadeAt = verifiedTransaction.madeAt;
         }
 
-        this.verifiedTransactions.push(verifiedTransaction);
+        // Push directly onto the backing field — NOT the self-healing public
+        // getter. This method IS what the getter's self-heal calls (via
+        // `parseNewTransactions`); going through the getter here would
+        // re-enter it on the very first (still-empty) push, duplicating every
+        // transaction loaded by this pass (see the getter's doc comment).
+        this.#verifiedTransactionsStore.push(verifiedTransaction);
         this.dispatchTransaction(verifiedTransaction);
         this.lastVerifiedTransactionBySessionID[sessionID] =
           verifiedTransaction;
@@ -1820,6 +2264,15 @@ export class CoValueCore {
   }
 
   getMergeCommits() {
+    // This function requires the meta information to be parsed (same
+    // requirement `hasBranch` documents above): `mergeCommits` is derived by
+    // `parseMetaInformation`, part of the TS `parseNewTransactions` pipeline,
+    // which a native-gated coMap's fast paths (`processNewTransactions`/
+    // `resetParsedTransactions`) do not run — they materialize the coMap view
+    // directly and never touch this TS-only bookkeeping. `mergeBranch` relies
+    // on `mergeCommits` being current to avoid re-merging already-merged
+    // transactions, so ensure it here rather than at every call site.
+    this.parseNewTransactions(false);
     return this.mergeCommits;
   }
 

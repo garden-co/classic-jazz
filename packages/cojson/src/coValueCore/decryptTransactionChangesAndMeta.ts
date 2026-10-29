@@ -24,6 +24,14 @@ export function decryptTransactionChangesAndMeta(
     return;
   }
 
+  // R1 (experimental, parallel to the TS decrypt below): feed the resolved
+  // secret to the native key store so Rust-resident coMap materialization can
+  // decrypt this key's private transactions itself. Key MANAGEMENT stays in TS
+  // (this `getReadKey` did the unsealing/revelation-chain work); we only hand
+  // the resolved secret across. Idempotent, and cheap once `readKeyCache` is
+  // warm. The TS decrypt path below is unchanged — R1 runs both in parallel.
+  coValue.node.nodeCore.provideKeySecret(transaction.tx.keyUsed, readKey);
+
   if (needsChagesParsing) {
     const changes = coValue.verified.decryptTransaction(
       transaction.txID.sessionID,
