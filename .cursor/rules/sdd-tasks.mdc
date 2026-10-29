@@ -1,0 +1,22 @@
+---
+description: "This rule provide the flow when executing the tasks from a spec"
+---
+
+# SDD task execution
+
+When the user asks to execute a task from a spec:
+
+1. Read:
+   - `.specs/{feature_name}/requirements.md`
+   - `.specs/{feature_name}/design.md`
+   - `.specs/{feature_name}/tasks.md`
+2. Focus on ONE task at a time.
+3. Implement only that task, referencing requirements and design.
+4. Once done, stop and let the user review.
+5. Do not automatically move to the next task.
+6. Mark the task as [x] in `tasks.md`.
+
+Important:
+- Only execute one task per interaction.
+- Do not implement functionality for other tasks.
+- If the user doesn’t specify a task, suggest the next one in the list.
