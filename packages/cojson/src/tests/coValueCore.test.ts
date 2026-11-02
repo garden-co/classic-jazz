@@ -89,6 +89,61 @@ test("transactions with wrong signature are rejected", () => {
   expect(newEntry.getValidSortedTransactions().length).toBe(0);
 });
 
+test("rejected transactions don't block the valid transactions that follow", () => {
+  const node = nodeWithRandomAgentAndSessionID();
+
+  const coValue = node.createCoValue({
+    type: "costream",
+    ruleset: { type: "unsafeAllowAll" },
+    meta: null,
+    ...Crypto.createdNowUnique(),
+  });
+
+  const { transaction, signature } =
+    coValue.verified.makeNewTrustingTransaction(
+      node.currentSessionID,
+      node.getCurrentAgent(),
+      [{ hello: "world" }],
+      undefined,
+      Date.now(),
+    );
+
+  const tampered = { ...transaction, madeAt: transaction.madeAt + 1000 };
+
+  node.internalDeleteCoValue(coValue.id);
+  node.syncManager.handleNewContent(
+    {
+      action: "content",
+      id: coValue.id,
+      header: coValue.verified.header,
+      priority: CO_VALUE_PRIORITY.LOW,
+      new: {},
+    },
+    "import",
+  );
+
+  const newEntry = node.getCoValue(coValue.id);
+
+  for (let i = 0; i < 3; i++) {
+    const error = newEntry.tryAddTransactions(
+      node.currentSessionID,
+      [tampered],
+      signature,
+    );
+    expect(error?.type).toBe("InvalidSignature");
+  }
+
+  const error = newEntry.tryAddTransactions(
+    node.currentSessionID,
+    [transaction],
+    signature,
+  );
+
+  expect(error).toBeUndefined();
+  expect(newEntry.getValidSortedTransactions().length).toBe(1);
+  expect(newEntry.knownState().sessions[node.currentSessionID]).toBe(1);
+});
+
 describe("transactions that exceed the byte size limit are rejected", () => {
   test("makeTransaction should throw error when transaction exceeds byte size limit", () => {
     const [agent, sessionID] = randomAgentAndSessionID();
