@@ -380,6 +380,11 @@ impl SessionLogInternal {
         Ok(())
     }
 
+    /// Drop transactions staged by a failed add, leaving committed state untouched.
+    pub fn discard_pending(&mut self) {
+        self.pending_transactions.clear();
+    }
+
     /// Check if there are pending transactions waiting to be committed.
     pub fn has_pending(&self) -> bool {
         !self.pending_transactions.is_empty()

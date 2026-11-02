@@ -405,6 +405,35 @@ impl SessionMapImpl {
         signature: &str,
         skip_verify: bool,
     ) -> Result<(), SessionMapError> {
+        let result = self.stage_and_commit_transactions(
+            session_id,
+            signer_id,
+            transactions_json,
+            signature,
+            skip_verify,
+        );
+
+        // Drop anything a failed add left staged. Otherwise the rejected
+        // transactions stay in memory, are folded into the hash of every later
+        // add for this session (so valid content fails verification too), and
+        // get committed by the next add that skips verification.
+        if result.is_err() {
+            if let Some(session_log) = self.sessions.get_mut(session_id) {
+                session_log.discard_pending();
+            }
+        }
+
+        result
+    }
+
+    fn stage_and_commit_transactions(
+        &mut self,
+        session_id: &str,
+        signer_id: Option<&str>,
+        transactions_json: &str,
+        signature: &str,
+        skip_verify: bool,
+    ) -> Result<(), SessionMapError> {
         if self.is_deleted && !is_delete_session_id(session_id) {
             return Err(SessionMapError::DeletedCoValue(self.co_id.0.clone()));
         }
@@ -889,6 +918,166 @@ mod tests {
     /// Helper to create a session map without validation (for tests that don't care about id matching)
     fn create_test_session_map(co_id: &str, header_json: &str) -> SessionMapImpl {
         SessionMapImpl::new_with_skip_verify(co_id, header_json, None, true).unwrap()
+    }
+
+    /// Signs `changes` for `session_id` on a scratch map and returns
+    /// `(transactions_json, signature)` ready for `add_transactions`.
+    fn sign_trusting_tx(
+        signer: &mut SessionMapImpl,
+        session_id: &str,
+        signer_secret: &str,
+        changes: &str,
+        made_at: u64,
+    ) -> (String, String) {
+        let signed = signer
+            .make_new_trusting_transaction(
+                session_id.to_string(),
+                signer_secret.to_string(),
+                changes,
+                None,
+                made_at,
+            )
+            .unwrap();
+        (
+            serde_json::to_string(&vec![signed.transaction]).unwrap(),
+            signed.signature.0,
+        )
+    }
+
+    #[test]
+    fn test_rejected_transactions_are_not_retained_after_invalid_signature() {
+        let signer_secret = crate::core::keys::SignerSecret::from(
+            ed25519_dalek::SigningKey::generate(&mut rand_core::OsRng),
+        );
+        let signer_id = crate::crypto::signature::get_signer_id(&signer_secret.0).unwrap();
+        let session_id = "co_zTestAccount_session_zTest";
+
+        let mut signer = create_test_session_map("co_test", TEST_HEADER);
+        let (tx1, sig1) =
+            sign_trusting_tx(&mut signer, session_id, &signer_secret.0, r#"[{"a":1}]"#, 1);
+        let (tx2, sig2) =
+            sign_trusting_tx(&mut signer, session_id, &signer_secret.0, r#"[{"a":2}]"#, 2);
+
+        let mut receiver = create_test_session_map("co_test", TEST_HEADER);
+        receiver
+            .add_transactions(session_id, Some(&signer_id), &tx1, &sig1, false)
+            .unwrap();
+
+        // A peer sends a transaction whose signature doesn't match (e.g. a
+        // diverged or corrupted session). It must be rejected...
+        let (bad_tx, _) = sign_trusting_tx(
+            &mut create_test_session_map("co_test", TEST_HEADER),
+            session_id,
+            &signer_secret.0,
+            r#"[{"evil":true}]"#,
+            2,
+        );
+        for _ in 0..3 {
+            assert!(receiver
+                .add_transactions(session_id, Some(&signer_id), &bad_tx, &sig2, false)
+                .is_err());
+        }
+
+        // ...without leaving anything staged behind for this session.
+        let log = receiver.sessions.get(session_id).unwrap();
+        assert!(
+            !log.has_pending(),
+            "rejected transactions must not stay staged"
+        );
+        assert_eq!(log.transactions_json().len(), 1);
+
+        // The genuine next transaction must still verify and commit.
+        receiver
+            .add_transactions(session_id, Some(&signer_id), &tx2, &sig2, false)
+            .unwrap();
+        assert_eq!(
+            receiver.get_known_state().sessions.get(session_id),
+            Some(&2)
+        );
+        assert_eq!(
+            receiver
+                .get_session_transactions(session_id, 0)
+                .unwrap()
+                .len(),
+            2
+        );
+    }
+
+    #[test]
+    fn test_rejected_transactions_are_not_committed_by_later_unverified_add() {
+        let signer_secret = crate::core::keys::SignerSecret::from(
+            ed25519_dalek::SigningKey::generate(&mut rand_core::OsRng),
+        );
+        let signer_id = crate::crypto::signature::get_signer_id(&signer_secret.0).unwrap();
+        let session_id = "co_zTestAccount_session_zTest";
+
+        let mut signer = create_test_session_map("co_test", TEST_HEADER);
+        let (tx1, sig1) =
+            sign_trusting_tx(&mut signer, session_id, &signer_secret.0, r#"[{"a":1}]"#, 1);
+
+        let mut receiver = create_test_session_map("co_test", TEST_HEADER);
+        let (bad_tx, _) = sign_trusting_tx(
+            &mut create_test_session_map("co_test", TEST_HEADER),
+            session_id,
+            &signer_secret.0,
+            r#"[{"evil":true}]"#,
+            1,
+        );
+        assert!(receiver
+            .add_transactions(session_id, Some(&signer_id), &bad_tx, &sig1, false)
+            .is_err());
+
+        // A later trusted add (e.g. from local storage, skip_verify = true)
+        // must commit only its own transactions, never the rejected ones.
+        receiver
+            .add_transactions(session_id, Some(&signer_id), &tx1, &sig1, true)
+            .unwrap();
+        assert_eq!(
+            receiver.get_known_state().sessions.get(session_id),
+            Some(&1)
+        );
+        let txs = receiver.get_session_transactions(session_id, 0).unwrap();
+        assert_eq!(txs.len(), 1);
+        assert!(!txs[0].contains("evil"));
+    }
+
+    #[test]
+    fn test_partially_staged_batch_is_discarded_on_error() {
+        let signer_secret = crate::core::keys::SignerSecret::from(
+            ed25519_dalek::SigningKey::generate(&mut rand_core::OsRng),
+        );
+        let signer_id = crate::crypto::signature::get_signer_id(&signer_secret.0).unwrap();
+        let session_id = "co_zTestAccount_session_zTest";
+
+        let mut signer = create_test_session_map("co_test", TEST_HEADER);
+        let (tx1, sig1) =
+            sign_trusting_tx(&mut signer, session_id, &signer_secret.0, r#"[{"a":1}]"#, 1);
+
+        // The first transaction stages fine, the second fails on its madeAt.
+        let mut batch: Vec<serde_json::Value> = serde_json::from_str(&tx1).unwrap();
+        let mut invalid = batch[0].clone();
+        invalid["madeAt"] = serde_json::json!(-1);
+        batch.push(invalid);
+
+        let mut receiver = create_test_session_map("co_test", TEST_HEADER);
+        assert!(receiver
+            .add_transactions(
+                session_id,
+                Some(&signer_id),
+                &serde_json::to_string(&batch).unwrap(),
+                &sig1,
+                false,
+            )
+            .is_err());
+        assert!(!receiver.sessions.get(session_id).unwrap().has_pending());
+
+        receiver
+            .add_transactions(session_id, Some(&signer_id), &tx1, &sig1, false)
+            .unwrap();
+        assert_eq!(
+            receiver.get_known_state().sessions.get(session_id),
+            Some(&1)
+        );
     }
 
     #[test]
