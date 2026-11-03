@@ -1,0 +1,30 @@
+---
+description: "This rule provide the workflow to build a spec using Spec Driven Development"
+---
+
+# SDD workflow
+
+When the user asks to implement a feature, follow this workflow:
+
+1. Create a feature directory under `.specs/{feature_name}` (kebab-case).
+2. Create `requirements.md` with:
+   - Introduction
+   - User stories + acceptance criteria (EARS style)
+3. Ask: "Do the requirements look good? If so, we can move on to the design."
+4. Once approved, create `design.md` with:
+   - Overview
+   - Architecture / components
+   - Data models
+   - Error handling / testing strategy
+5. Ask: "Does the design look good? If so, we can move on to the implementation plan."
+6. Once approved, create `tasks.md` with:
+   - Numbered checklist of coding tasks
+   - Each task references specific requirements
+   - Only coding tasks (no deployment, docs, etc.)
+7. Ask: "Do the tasks look good?"
+8. Stop. Do not implement anything yet.
+
+Important:
+- Do not skip steps.
+- Always ask for explicit approval before moving to the next step.
+- Do not implement code in this workflow.
