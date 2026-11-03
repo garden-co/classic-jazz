@@ -47,6 +47,50 @@ body {
   font-family: var(--font-inter), sans-serif;
 }
 
+.classic-docs-warning {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border: 2px solid #b45309;
+  border-radius: 0.5rem;
+  background: #fffbeb;
+  color: #78350f;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.classic-docs-warning p {
+  margin: 0 0 0.75rem;
+}
+
+.classic-docs-warning p:first-child {
+  font-size: 1.125rem;
+}
+
+.classic-docs-warning p:last-child {
+  margin-bottom: 0;
+}
+
+.classic-docs-warning strong,
+.classic-docs-warning a {
+  color: inherit;
+}
+
+.classic-docs-warning a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.classic-docs-warning a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.dark .classic-docs-warning {
+  border-color: #fbbf24;
+  background: #451a03;
+  color: #fef3c7;
+}
+
 *:focus {
   outline: none;
 }

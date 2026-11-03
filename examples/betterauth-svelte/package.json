@@ -7,7 +7,8 @@
   "scripts": {
     "ensure-env": "node scripts/ensure-env.js",
     "dev": "pnpm ensure-env && vite dev",
-    "build": "pnpm ensure-env && pnpm check && vite build",
+    "build": "pnpm ensure-env && pnpm check && pnpm test:sqlite-bundle && vite build",
+    "test:sqlite-bundle": "node --test scripts/sqlite-bundle.test.mjs",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

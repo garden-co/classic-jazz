@@ -5,6 +5,7 @@ import { writeDocsFile } from "./utils/index.mjs";
 import { mdxToMd } from "./utils/mdx-processor.mjs";
 
 const CWD = process.cwd();
+const CLASSIC_WARNING = await fs.readFile(path.join(CWD, "scripts/classic-docs-warning.md"), "utf8");
 const EXCLUDE_PATTERNS = [/\/upgrade\//];
 
 // Map each framework to its representative example
@@ -214,9 +215,9 @@ async function appendExampleCode(output, exampleName) {
 
 function initializeOutputs() {
   return {
-    generic: ["# Jazz\n"],
+    generic: ["# Classic Jazz\n", CLASSIC_WARNING, "\n"],
     ...Object.fromEntries(
-      FRAMEWORKS.map((fw) => [fw, [`# Jazz (${fw})\n`]])
+      FRAMEWORKS.map((fw) => [fw, [`# Classic Jazz (${fw})\n`, CLASSIC_WARNING, "\n"]])
     ),
   };
 }
@@ -257,7 +258,7 @@ async function buildDocumentationContent(outputs) {
   addToAllOutputs(
     outputs,
     "## Resources\n",
-    "- [Documentation](https://jazz.tools/docs): Detailed documentation about Jazz",
+    "- [Jazz v2.0 and later documentation](https://jazz.tools/docs): Current documentation for new projects",
     "- [Examples](https://jazz.tools/examples): Code examples and tutorials\n"
   );
 }
