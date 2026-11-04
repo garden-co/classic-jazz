@@ -44,6 +44,16 @@ The `generate-env.ts` script creates the necessary environment variables for Jaz
 - `NEXT_PUBLIC_JAZZ_WORKER_ACCOUNT`: Server worker account ID
 - `JAZZ_WORKER_SECRET`: Server worker secret key
 
+Set `NEXT_PUBLIC_JAZZ_SYNC_SERVER` to use a self-hosted sync server. Worker provisioning, the server worker, and browser clients all use this URL.
+
+### Local end-to-end tests
+
+```bash
+pnpm test:e2e:local
+```
+
+This starts an in-memory sync server, provisions a worker, builds the app, and runs Playwright against that same server. It does not require Jazz Cloud or write worker credentials to an environment file.
+
 ## 🔧 Key Implementation Details
 
 ### Server API Definition

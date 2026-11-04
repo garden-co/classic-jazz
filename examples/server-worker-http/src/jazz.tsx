@@ -1,5 +1,5 @@
 import { JazzReactProvider } from "jazz-tools/react";
-import { apiKey } from "./apiKey";
+import { syncServer } from "./syncServer";
 import { JazzInspector } from "jazz-tools/inspector";
 
 export function Jazz({ children }: { children: React.ReactNode }) {
@@ -7,7 +7,7 @@ export function Jazz({ children }: { children: React.ReactNode }) {
     <JazzReactProvider
       enableSSR
       sync={{
-        peer: `wss://cloud.jazz.tools/?key=${apiKey}`,
+        peer: syncServer,
       }}
     >
       <JazzInspector />

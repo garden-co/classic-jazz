@@ -1,14 +1,20 @@
 import * as fs from "fs";
 import { createWorkerAccount } from "jazz-run/createWorkerAccount";
+import { syncServer } from "./src/syncServer";
 
-if (fs.existsSync(".env")) {
+if (
+  fs.existsSync(".env") ||
+  (process.env.JAZZ_WORKER_ACCOUNT &&
+    process.env.JAZZ_WORKER_SECRET &&
+    process.env.NEXT_PUBLIC_JAZZ_WORKER_ACCOUNT)
+) {
   process.exit(0);
 }
 
 async function main() {
   const account = await createWorkerAccount({
     name: "jazz-paper-scissors-worker",
-    peer: "wss://cloud.jazz.tools/?key=jazz-paper-scissors@garden.co",
+    peer: syncServer,
   });
 
   fs.writeFileSync(

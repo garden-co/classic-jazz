@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "biome check .",
     "test:e2e": "playwright test",
+    "test:e2e:local": "node tests/run-local-e2e.mjs",
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
