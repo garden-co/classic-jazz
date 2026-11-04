@@ -1634,6 +1634,8 @@ export class SyncManager {
     }
 
     return new Promise((resolve, reject) => {
+      let unsubscribeFromCoValue: (() => void) | undefined;
+
       const unsubscribe = this.syncState.subscribeToPeerUpdates(
         peerId,
         id,
@@ -1641,10 +1643,21 @@ export class SyncManager {
           if (syncState.uploaded) {
             resolve(true);
             unsubscribe?.();
+            unsubscribeFromCoValue?.();
             clearTimeout(timeoutId);
           }
         },
       );
+
+      // Local ingestion may catch up without a peer update, so re-check.
+      unsubscribeFromCoValue = this.local.getCoValue(id).subscribe(() => {
+        if (this.syncState.isSynced(peerState, id)) {
+          resolve(true);
+          unsubscribe?.();
+          unsubscribeFromCoValue?.();
+          clearTimeout(timeoutId);
+        }
+      }, false);
 
       const timeoutId = setTimeout(() => {
         const coValue = this.local.getCoValue(id);
@@ -1662,6 +1675,7 @@ export class SyncManager {
 
         reject(new Error(errorMessage));
         unsubscribe?.();
+        unsubscribeFromCoValue?.();
       }, timeout);
     });
   }
