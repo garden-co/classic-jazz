@@ -1,4 +1,8 @@
-import { CleanedWhere } from "better-auth/adapters";
+import type { CleanedWhere as BetterAuthCleanedWhere } from "better-auth/adapters";
+
+export type CleanedWhere = Omit<BetterAuthCleanedWhere, "mode"> & {
+  mode?: "sensitive" | "insensitive";
+};
 
 export function filterListByWhere<T>(
   data: T[],
@@ -18,8 +22,19 @@ export function filterListByWhere<T>(
 
   // Helper to evaluate a single condition
   function evaluateCondition(item: any, condition: CleanedWhere): boolean {
-    const { field, operator, value } = condition;
-    const itemValue = field === "id" ? item.$jazz.id : item[field];
+    const { field, operator } = condition;
+    let value = condition.value;
+    let itemValue = field === "id" ? item.$jazz.id : item[field];
+    if (condition.mode === "insensitive") {
+      if (typeof itemValue === "string") itemValue = itemValue.toLowerCase();
+      if (typeof value === "string") value = value.toLowerCase();
+      else if (
+        Array.isArray(value) &&
+        value.every((entry) => typeof entry === "string")
+      ) {
+        value = value.map((entry) => entry.toLowerCase());
+      }
+    }
 
     switch (operator) {
       case "eq":
@@ -135,6 +150,7 @@ export function paginateList<T>(
 function isWhereByField(field: string, where: CleanedWhere): boolean {
   return (
     where.field === field &&
+    where.mode !== "insensitive" &&
     where.operator === "eq" &&
     where.connector === "AND"
   );

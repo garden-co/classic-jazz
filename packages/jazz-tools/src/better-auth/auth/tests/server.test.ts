@@ -16,19 +16,12 @@ import { emailOTP, genericOAuth } from "better-auth/plugins";
 
 describe("Better-Auth server plugin", async () => {
   describe("Email & Password", () => {
-    let auth: ReturnType<
-      typeof betterAuth<{
-        plugins: ReturnType<typeof jazzPlugin>[];
-      }>
-    >;
+    let auth: ReturnType<typeof createAuth>;
 
     let accountCreationSpy: Mock;
 
-    beforeEach(() => {
-      accountCreationSpy = vi.fn();
-
-      // Create auth instance with in-memory database
-      auth = betterAuth({
+    const createAuth = () =>
+      betterAuth({
         database: memoryAdapter({
           user: [],
           session: [],
@@ -48,6 +41,12 @@ describe("Better-Auth server plugin", async () => {
           },
         },
       });
+
+    beforeEach(() => {
+      accountCreationSpy = vi.fn();
+
+      // Create auth instance with in-memory database
+      auth = createAuth();
     });
 
     it("should successfully register a new user with email and password", async () => {
@@ -200,11 +199,7 @@ describe("Better-Auth server plugin", async () => {
     await server.start();
     const oauthPort = Number(server.issuer.url?.split(":")[2]!);
 
-    let auth: ReturnType<
-      typeof betterAuth<{
-        plugins: ReturnType<typeof jazzPlugin | typeof genericOAuth>[];
-      }>
-    >;
+    let auth: ReturnType<typeof createAuth>;
     let accountCreationSpy: Mock;
     let verificationCreationSpy: Mock;
 
@@ -215,7 +210,7 @@ describe("Better-Auth server plugin", async () => {
         userInfoResponse.body = {
           email: "oauth2@test.com",
           name: "OAuth2 Test",
-          sub: "oauth2",
+          sub: "johndoe",
           picture: "https://test.com/picture.png",
           email_verified: true,
         };
@@ -227,12 +222,8 @@ describe("Better-Auth server plugin", async () => {
       await server.stop();
     });
 
-    beforeEach(() => {
-      accountCreationSpy = vi.fn();
-      verificationCreationSpy = vi.fn();
-
-      // Create auth instance with in-memory database
-      auth = betterAuth({
+    const createAuth = () =>
+      betterAuth({
         database: memoryAdapter({
           user: [],
           session: [],
@@ -274,6 +265,13 @@ describe("Better-Auth server plugin", async () => {
           },
         },
       });
+
+    beforeEach(() => {
+      accountCreationSpy = vi.fn();
+      verificationCreationSpy = vi.fn();
+
+      // Create auth instance with in-memory database
+      auth = createAuth();
     });
 
     it("should store jazzAuth in verification table when using social provider", async () => {
@@ -358,22 +356,14 @@ describe("Better-Auth server plugin", async () => {
   });
 
   describe("Email OTP plugin", () => {
-    let auth: ReturnType<
-      typeof betterAuth<{
-        plugins: ReturnType<typeof jazzPlugin | typeof emailOTP>[];
-      }>
-    >;
+    let auth: ReturnType<typeof createAuth>;
 
     let accountCreationSpy: Mock;
     let verificationCreationSpy: Mock;
     let sendVerificationOTPSpy: Mock;
 
-    beforeEach(() => {
-      accountCreationSpy = vi.fn();
-      verificationCreationSpy = vi.fn();
-      sendVerificationOTPSpy = vi.fn();
-      // Create auth instance with in-memory database
-      auth = betterAuth({
+    const createAuth = () =>
+      betterAuth({
         database: memoryAdapter({
           user: [],
           session: [],
@@ -406,6 +396,13 @@ describe("Better-Auth server plugin", async () => {
           },
         },
       });
+
+    beforeEach(() => {
+      accountCreationSpy = vi.fn();
+      verificationCreationSpy = vi.fn();
+      sendVerificationOTPSpy = vi.fn();
+      // Create auth instance with in-memory database
+      auth = createAuth();
     });
 
     it("should create a new account with jazz auth when using email OTP", async () => {

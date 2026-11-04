@@ -24,7 +24,6 @@
   },
   "packageManager": "pnpm@10.16.1",
   "dependencies": {
-    "@better-auth/expo": "^1.2.7",
     "@garden-co/design-system": "workspace:*",
     "@headlessui/react": "^2.2.0",
     "@icons-pack/react-simple-icons": "^9.1.0",

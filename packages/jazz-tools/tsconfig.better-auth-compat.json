@@ -14,5 +14,5 @@
       ]
     }
   },
-  "include": ["test-consumers/better-auth-1.6.ts"]
+  "include": ["test-consumers/better-auth.ts"]
 }

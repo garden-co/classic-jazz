@@ -18,7 +18,7 @@ import {
 } from "vitest";
 import { jazzPluginClient } from "../client.js";
 import type { JazzPluginSchema } from "../plugin-types.js";
-import { emailOTPClient, genericOAuthClient } from "better-auth/client/plugins";
+import { emailOTPClient } from "better-auth/client/plugins";
 
 type JazzPluginClient = ReturnType<typeof jazzPluginClient>;
 type JazzAuthClient = ReturnType<
@@ -50,11 +50,7 @@ describe("Better-Auth client plugin", () => {
   let authSecretStorage: AuthSecretStorage;
   let authClient: ReturnType<
     typeof createAuthClient<{
-      plugins: ReturnType<
-        | typeof jazzPluginClient
-        | typeof emailOTPClient
-        | typeof genericOAuthClient
-      >[];
+      plugins: ReturnType<typeof jazzPluginClient | typeof emailOTPClient>[];
     }>
   >;
   let customFetchImpl = vi.fn();
@@ -81,7 +77,7 @@ describe("Better-Auth client plugin", () => {
 
     authClient = createAuthClient({
       baseURL: "http://localhost:3000",
-      plugins: [jazzPluginClient(), emailOTPClient(), genericOAuthClient()],
+      plugins: [jazzPluginClient(), emailOTPClient()],
       fetchOptions: {
         customFetchImpl,
       },
@@ -395,13 +391,13 @@ describe("Better-Auth client plugin", () => {
     customFetchImpl.mockResolvedValue(new Response(JSON.stringify({})));
 
     // Sign up
-    await authClient.signIn.oauth2({
-      providerId: "github",
+    await authClient.signIn.social({
+      provider: "github",
     });
 
     expect(customFetchImpl).toHaveBeenCalledTimes(1);
     expect(customFetchImpl.mock.calls[0]![0].toString()).toBe(
-      "http://localhost:3000/api/auth/sign-in/oauth2",
+      "http://localhost:3000/api/auth/sign-in/social",
     );
 
     // Verify the credentials have been injected in the request body
@@ -666,6 +662,7 @@ describe("Better-Auth client plugin", () => {
       // generation number will be older, preventing an unintended logout.
 
       const capturedHeaders: any[] = [];
+      let signInHeaders: Headers | undefined;
       let resolveStaleSession: (value: Response) => void;
       const staleSessionPromise = new Promise<Response>((resolve) => {
         resolveStaleSession = resolve;
@@ -677,11 +674,14 @@ describe("Better-Auth client plugin", () => {
             urlOrRequest instanceof Request
               ? urlOrRequest.headers
               : init?.headers || {};
-          capturedHeaders.push(headers);
+          capturedHeaders.push(new Headers(headers));
 
           const url =
             urlOrRequest instanceof Request ? urlOrRequest.url : urlOrRequest;
 
+          if (url.toString().includes("/sign-in/email")) {
+            signInHeaders = new Headers(headers);
+          }
           if (url.toString().includes("/get-session")) {
             return staleSessionPromise;
           }
@@ -734,9 +734,7 @@ describe("Better-Auth client plugin", () => {
       expect(authSecretStorage.isAuthenticated).toBe(true);
 
       // Verify the sign-in request had no x-jazz-auth-generation header (it is gated to get-session)
-      expect(
-        getHeader(capturedHeaders[1], "x-jazz-auth-generation"),
-      ).toBeNull();
+      expect(getHeader(signInHeaders, "x-jazz-auth-generation")).toBeNull();
 
       // Resolve the stale get-session response with null
       resolveStaleSession!(new Response(JSON.stringify(null)));

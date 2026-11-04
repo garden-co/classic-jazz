@@ -74,7 +74,7 @@
       "form-data": ">=4.0.4",
       "happy-dom": ">=20.0.0",
       "rfc6902": ">=5.0.0",
-      "better-auth": "^1.4.7",
+      "better-auth": "1.7.16",
       "next": "catalog:next"
     },
     "onlyBuiltDependencies": [

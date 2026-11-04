@@ -1,5 +1,5 @@
 import { BetterAuthDBSchema } from "better-auth/db";
-import { CleanedWhere } from "better-auth/adapters";
+import type { CleanedWhere } from "../utils.js";
 import { co, Account } from "jazz-tools";
 import { JazzRepository } from "./generic";
 import { UserRepository } from "./user";
@@ -136,9 +136,16 @@ export class SessionRepository extends JazzRepository {
       );
     }
 
-    throw new Error(
-      "Unable to find session with where: " + JSON.stringify(where),
-    );
+    const users = await this.userRepository.findMany("user", undefined);
+    const sessions: TableItem[] = [];
+    for (const user of users) {
+      const loaded = await user.$jazz.ensureLoaded({
+        resolve: { sessions: { $each: true } },
+      });
+      sessions.push(...loaded.sessions);
+    }
+
+    return this.filterSortPaginateList(sessions, where, limit, sortBy, offset);
   }
 
   /**
@@ -150,9 +157,17 @@ export class SessionRepository extends JazzRepository {
       return 0;
     }
 
-    const userId = items[0]!.userId;
-
-    return this.deleteSession(userId, items);
+    const sessionsByUser = new Map<string, TableItem[]>();
+    for (const item of items) {
+      const sessions = sessionsByUser.get(item.userId) ?? [];
+      sessions.push(item);
+      sessionsByUser.set(item.userId, sessions);
+    }
+    let deleted = 0;
+    for (const [userId, sessions] of sessionsByUser) {
+      deleted += await this.deleteSession(userId, sessions);
+    }
+    return deleted;
   }
 
   private async deleteSession(
