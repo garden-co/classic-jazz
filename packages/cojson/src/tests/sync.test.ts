@@ -887,6 +887,35 @@ describe("waitForSyncWithPeer", () => {
       ),
     ).rejects.toThrow("Timeout");
   });
+
+  test("should resolve when local ingestion catches up with the peer known state", async () => {
+    const receiver = nodeWithRandomAgentAndSessionID();
+    const { syncManager } = receiver;
+    const group = jazzCloud.node.createGroup();
+    const map = group.createMap();
+    map.set("key1", "value1", "trusting");
+
+    const groupContent = group.core.newContentSince(undefined)![0]!;
+    const firstContent = map.core.newContentSince(undefined)![0]!;
+    syncManager.handleNewContent(groupContent, "import");
+    syncManager.handleNewContent(firstContent, "import");
+
+    const [peer] = connectedPeers("sender", "receiver");
+    syncManager.addPeer(peer);
+    const peerState = syncManager.peers["sender"]!;
+
+    map.set("key2", "value2", "trusting");
+    peerState.combineWith(map.id, map.core.knownState());
+    expect(syncManager.syncState.isSynced(peerState, map.id)).toBe(false);
+
+    const content = map.core.newContentSince(
+      receiver.expectCoValueLoaded(map.id).knownState(),
+    )![0]!;
+    const wait = syncManager.waitForSyncWithPeer("sender", map.id, 100);
+    syncManager.handleNewContent(content, "import");
+
+    await expect(wait).resolves.toBe(true);
+  });
 });
 
 test("Should not crash when syncing an unknown coValue type", async () => {
