@@ -18,7 +18,7 @@
     "@icons-pack/react-simple-icons": "^12.8.0",
     "@radix-ui/react-label": "^2.1.6",
     "@radix-ui/react-slot": "^1.2.2",
-    "better-auth": "^1.4.7",
+    "better-auth": "1.7.16",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "jazz-tools": "workspace:*",

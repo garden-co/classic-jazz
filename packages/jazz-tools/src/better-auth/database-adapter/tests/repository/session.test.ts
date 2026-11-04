@@ -73,6 +73,25 @@ describe("SessionRepository", () => {
     );
   });
 
+  it("lists and deletes sessions across users with an empty filter", async () => {
+    const users = new UserRepository(databaseSchema, databaseRoot, worker);
+    const sessions = new SessionRepository(
+      databaseSchema,
+      databaseRoot,
+      worker,
+    );
+    for (const email of ["first@example.com", "second@example.com"]) {
+      const user = await users.create("user", { email });
+      await sessions.create("session", {
+        userId: user.$jazz.id,
+        token: `session-${email}`,
+      });
+    }
+    expect(await sessions.findMany("session", [])).toHaveLength(2);
+    expect(await sessions.deleteValue("session", [])).toBe(2);
+    expect(await sessions.findMany("session", [])).toEqual([]);
+  });
+
   describe("create", () => {
     it("should throw an error if token or userId is not provided", async () => {
       const sessionRepository = new SessionRepository(
@@ -231,7 +250,7 @@ describe("SessionRepository", () => {
       expect(deleted).toBe(0);
     });
 
-    it("should throw an error for unsupported where clause", async () => {
+    it("should return zero when a general filter matches no sessions", async () => {
       const sessionRepository = new SessionRepository(
         databaseSchema,
         databaseRoot,
@@ -242,7 +261,7 @@ describe("SessionRepository", () => {
         sessionRepository.deleteValue("session", [
           { field: "random", operator: "eq", value: "x", connector: "AND" },
         ]),
-      ).rejects.toThrow("Unable to find session with where:");
+      ).resolves.toBe(0);
     });
 
     it("should delete a session by id", async () => {

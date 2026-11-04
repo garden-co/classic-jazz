@@ -109,6 +109,18 @@ jobs:
               cp .env.test .env
             fi
 
+            if [ "$project" = "examples/server-worker-http" ]; then
+              # Provision and test against one local sync server, including during build.
+              if pnpm run test:e2e:local; then
+                passed_projects+=("$project")
+              else
+                failed_projects+=("$project (local build/tests failed)")
+                overall_exit_code=1
+              fi
+              cd - > /dev/null
+              continue
+            fi
+
             if ! pnpm turbo build; then
               echo "❌ BUILD FAILED: $project"
               failed_projects+=("$project (build failed)")

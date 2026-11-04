@@ -1,4 +1,4 @@
-import { CleanedWhere } from "better-auth/adapters";
+import type { CleanedWhere } from "../utils.js";
 import { BetterAuthDBSchema } from "better-auth/db";
 import { Account, CoList, CoMap, Group, co } from "jazz-tools";
 import type { Database, TableItem } from "../schema.js";
@@ -286,7 +286,7 @@ export class JazzRepository {
   }
 
   protected filterSortPaginateList<T extends TableItem>(
-    list: CoList<CoMap | null>,
+    list: Iterable<CoMap | null>,
     where: CleanedWhere[] | undefined,
     limit?: number,
     sortBy?: { field: string; direction: "asc" | "desc" },
@@ -294,7 +294,7 @@ export class JazzRepository {
   ): T[] {
     // ignore nullable values and soft deleted items
     return [
-      list.filter(
+      [...list].filter(
         (item) => item !== null && item.$jazz.raw.get("_deleted") !== true,
       ),
     ]

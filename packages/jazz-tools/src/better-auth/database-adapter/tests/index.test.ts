@@ -1,5 +1,9 @@
 import { betterAuth } from "better-auth";
-import { runAdapterTest } from "better-auth/adapters/test";
+import {
+  createTestSuite,
+  getNormalTestSuiteTests,
+  testAdapter,
+} from "@better-auth/test-utils/adapter";
 import {
   assert,
   afterAll,
@@ -20,45 +24,69 @@ import { assertLoaded } from "jazz-tools/testing";
 
 describe("JazzBetterAuthDatabaseAdapter tests", async () => {
   describe("better-auth internal tests", async () => {
-    let syncServer: any;
-    let accountID: string;
-    let accountSecret: string;
-    let adapter: ReturnType<typeof JazzBetterAuthDatabaseAdapter>;
-
-    beforeAll(async () => {
-      syncServer = await startSyncServer();
-
-      const workerAccount = await createWorkerAccount({
-        name: "test",
-        peer: `ws://localhost:${syncServer.port}`,
-      });
-
-      accountID = workerAccount.accountID;
-      accountSecret = workerAccount.agentSecret;
-
-      adapter = JazzBetterAuthDatabaseAdapter({
-        debugLogs: {
-          // If your adapter config allows passing in debug logs, then pass this here.
-          isRunningAdapterTests: true, // This is our super secret flag to let us know to only log debug logs if a test fails.
-        },
-        syncServer: `ws://localhost:${syncServer.port}`,
-        accountID,
-        accountSecret,
-      });
+    // The upstream harness initializes the adapter while collecting tests.
+    const syncServer = await startSyncServer();
+    const workerAccount = await createWorkerAccount({
+      name: "test",
+      peer: `ws://localhost:${syncServer.port}`,
+    });
+    const adapter = JazzBetterAuthDatabaseAdapter({
+      debugLogs: { isRunningAdapterTests: true },
+      syncServer: `ws://localhost:${syncServer.port}`,
+      accountID: workerAccount.accountID,
+      accountSecret: workerAccount.agentSecret,
     });
 
     afterAll(async () => {
       syncServer.close();
     });
 
-    await runAdapterTest({
-      disableTests: {
-        SHOULD_PREFER_GENERATE_ID_IF_PROVIDED: true,
-      },
-      getAdapter: async (betterAuthOptions = {}) => {
-        return adapter(betterAuthOptions);
-      },
+    const suite = await testAdapter({
+      adapter: async () => adapter,
+      runMigrations: () => {},
+      tests: [
+        createTestSuite("Jazz CRUD", {}, (helpers) => {
+          const tests = getNormalTestSuiteTests(helpers);
+          // Preserve the CRUD coverage of the former runAdapterTest harness.
+          // Jazz uses CoValue IDs, so custom ID generation is not supported.
+          const testNames = [
+            "create - should always return an id",
+            "findOne - should find a model",
+            "findOne - should find a model without id",
+            "findOne - should find a model using a reference field",
+            "findOne - should not throw on record not found",
+            "findOne - should find a model with modified field name",
+            "findOne - should select fields",
+            "findMany - should find many models",
+            "findMany - should find many models with eq operator",
+            "findMany - should find many models with ne operator",
+            "findMany - should find many models with gt operator",
+            "findMany - should find many models with gte operator",
+            "findMany - should find many models with lt operator",
+            "findMany - should find many models with lte operator",
+            "findMany - should find many models with in operator",
+            "findMany - should find many models with not_in operator",
+            "findMany - should find many models with sortBy",
+            "findMany - should find many models with limit",
+            "findMany - should find many models with offset",
+            "findMany - should find many models with contains operator",
+            "findMany - should find many models with starts_with operator",
+            "findMany - should find many models with ends_with operator",
+            "update - should update a model",
+            "updateMany - should update many models with a specific where",
+            "updateMany - should update many models with a multiple where",
+            "delete - should delete a model",
+            "delete - should not throw on record not found",
+            "deleteMany - should delete many models",
+            "count - should count many models",
+          ] as const;
+          return Object.fromEntries(
+            testNames.map((name) => [name, tests[name]]),
+          );
+        })(),
+      ],
     });
+    suite.execute();
   });
 
   describe("persistence tests", async () => {

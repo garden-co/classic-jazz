@@ -1,0 +1,13 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "env": [
+        "JAZZ_WORKER_ACCOUNT",
+        "JAZZ_WORKER_SECRET",
+        "NEXT_PUBLIC_JAZZ_WORKER_ACCOUNT",
+        "NEXT_PUBLIC_JAZZ_SYNC_SERVER"
+      ]
+    }
+  }
+}

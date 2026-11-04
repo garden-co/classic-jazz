@@ -1,4 +1,4 @@
-import { CleanedWhere } from "better-auth/adapters";
+import type { CleanedWhere } from "../utils.js";
 import { JazzRepository } from "./generic";
 import { isWhereBySingleField } from "../utils";
 import type { TableItem } from "../schema";

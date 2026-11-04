@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.better-auth-compat.json",
+  "compilerOptions": {
+    "paths": {}
+  }
+}

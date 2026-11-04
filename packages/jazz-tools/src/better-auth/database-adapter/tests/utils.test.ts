@@ -1,4 +1,4 @@
-import { CleanedWhere } from "better-auth/adapters";
+import type { CleanedWhere } from "../utils.js";
 import { describe, expect, it } from "vitest";
 import {
   filterListByWhere,
@@ -21,6 +21,49 @@ describe("filterListByWhere", () => {
     { id: 4, name: "David", age: 28, email: "david@test.com", active: true },
     { id: 5, name: "Eve", age: 22, email: "eve@example.com", active: false },
   ];
+
+  it.each(["eq", "contains", "starts_with", "ends_with", "in"] as const)(
+    "honors insensitive mode for %s",
+    (operator) => {
+      const value = operator === "in" ? ["ALICE"] : "ALICE";
+      expect(
+        filterListByWhere(testData, [
+          {
+            field: "name",
+            operator,
+            value,
+            connector: "AND",
+            mode: "insensitive",
+          },
+        ]),
+      ).toEqual([testData[0]]);
+      expect(
+        filterListByWhere(testData, [
+          {
+            field: "name",
+            operator,
+            value,
+            connector: "AND",
+            mode: "sensitive",
+          },
+        ]),
+      ).toEqual([]);
+    },
+  );
+
+  it("does not use an exact lookup for an insensitive query", () => {
+    expect(
+      isWhereBySingleField("email", [
+        {
+          field: "email",
+          operator: "eq",
+          value: "ALICE@example.com",
+          connector: "AND",
+          mode: "insensitive",
+        },
+      ]),
+    ).toBe(false);
+  });
 
   describe("basic functionality", () => {
     it("should return all data when where is undefined", () => {

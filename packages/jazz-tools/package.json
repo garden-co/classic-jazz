@@ -234,7 +234,7 @@
     "dev": "tsup --watch",
     "bench": "vitest bench --run --root ../../ --project jazz-tools",
     "test": "vitest --run --root ../../ --project jazz-tools",
-    "test:better-auth-compat": "pnpm types && tsc -p tsconfig.better-auth-compat.json",
+    "test:better-auth-compat": "pnpm types && tsc -p tsconfig.better-auth-compat.json && tsc -p tsconfig.better-auth-latest.json",
     "test:watch": "vitest --watch --root ../../ --project jazz-tools",
     "types": "tsc --outDir dist",
     "build:svelte": "rm -rf dist/svelte && svelte-package -i src/svelte -o dist/svelte --tsconfig tsconfig.svelte.json",
@@ -242,6 +242,7 @@
     "build": "tsup && pnpm types && pnpm build:svelte && pnpm build:better-auth-svelte"
   },
   "devDependencies": {
+    "@better-auth/test-utils": "1.7.16",
     "@scure/bip39": "^1.3.0",
     "@sveltejs/package": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^6.1.0",
@@ -269,7 +270,7 @@
     "@bam.tech/react-native-image-resizer": "*",
     "@op-engineering/op-sqlite": "*",
     "@react-native-community/netinfo": "*",
-    "better-auth": "^1.4.7",
+    "better-auth": "1.7.16",
     "expo-file-system": "*",
     "expo-image-manipulator": "*",
     "expo-secure-store": "*",
