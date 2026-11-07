@@ -65,12 +65,35 @@ export class OPSQLiteAdapter implements SQLiteDatabaseDriverAsync {
     }
   }
 
+  /**
+   * Reads go through op-sqlite's synchronous JSI path where it is available.
+   *
+   * op-sqlite's native thread pool is hardcoded to a single thread
+   * (`cpp/OPThreadPool.cpp`), so async reads gain no parallelism — they just
+   * queue behind one another, and each one pays for a thread hop plus a promise
+   * round-trip. On a cold covalue-load storm that overhead dominates: reads are
+   * ~0.2ms of actual work wrapped in ~0.5ms of dispatch.
+   *
+   * Transaction-scoped adapters (`withDB`) get an op-sqlite `Transaction`, which
+   * exposes neither `transaction` nor `executeSync`, so their reads stay on the
+   * async path and remain ordered with the transaction's own writes.
+   */
+  private read(sql: string, params?: unknown[]) {
+    const db = this.db!;
+
+    if ("transaction" in db && "executeSync" in db) {
+      return db.executeSync(sql, params as any[]);
+    }
+
+    return db.execute(sql, params as any[]);
+  }
+
   public async query<T>(sql: string, params?: unknown[]): Promise<T[]> {
     if (!this.db) {
       throw new Error("Database not initialized");
     }
 
-    const result = await this.db.execute(sql, params as any[]);
+    const result = await this.read(sql, params);
 
     return result.rows as T[];
   }
@@ -80,7 +103,7 @@ export class OPSQLiteAdapter implements SQLiteDatabaseDriverAsync {
       throw new Error("Database not initialized");
     }
 
-    const result = await this.db.execute(sql, params as any[]);
+    const result = await this.read(sql, params);
 
     return result.rows[0] as T | undefined;
   }
