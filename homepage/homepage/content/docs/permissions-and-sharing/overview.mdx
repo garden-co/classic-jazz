@@ -115,6 +115,28 @@ You can add group members by ID by using `co.account().load` and `Group.addMembe
 ```
 </CodeGroup>
 
+## Listing the members of a group
+
+`group.members` returns every member of the group, including the ones inherited from [parent groups](/docs/permissions-and-sharing/cascading-permissions). Use `group.getDirectMembers()` if you only want the members that were added to the group itself.
+
+<CodeGroup>
+```ts index.ts#ListMembers
+```
+</CodeGroup>
+
+Each entry has the account's `id`, its `role`, and an `account` you can read from. Members whose access has been revoked are not included, and neither is the special `"everyone"` member added by `makePublic()`.
+
+## Checking a member's role
+
+Use `group.myRole()` to get the role of the current account, or `group.getRoleOf()` to get the role of a specific account by its ID. Both take inherited roles into account, and return `undefined` when the account has no role in the group. If the group is public (see `makePublic()`), accounts without a more specific role get the role given to everyone.
+
+<CodeGroup>
+```ts index.ts#GetRole
+```
+</CodeGroup>
+
+`getRoleOf("everyone")` tells you whether the group is public and which role everyone has.
+
 ## Changing a member's role
 
 To change a member's role, use the `addMember` method.
@@ -141,6 +163,8 @@ Rules:
 - All roles can remove themselves
 - Admins can remove all roles (except other admins)
 - Managers can remove users with less privileged roles (writer, writeOnly, reader)
+- Admins cannot be removed by anyone else, they have to remove themselves
+- Removing a member also rotates the group's read key, so the removed account can't read content written after the removal. Content it could already read stays readable to it.
 
 ## Getting the Group of an existing CoValue
 
