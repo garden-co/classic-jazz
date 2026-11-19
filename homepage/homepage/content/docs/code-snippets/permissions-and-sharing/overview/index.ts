@@ -4,6 +4,8 @@ import { Group } from "jazz-tools";
 const group = Group.create();
 // #endregion
 
+import type { Account, ID } from "jazz-tools";
+
 const bobsId = "";
 // #region AddMember
 import { co } from "jazz-tools";
@@ -17,6 +19,29 @@ if (bob.$isLoaded) {
 // #region ChangeRole
 if (bob.$isLoaded) {
   group.addMember(bob, "reader");
+}
+// #endregion
+
+// #region ListMembers
+// All members, including the ones inherited from parent groups
+for (const member of group.members) {
+  console.log(member.id, member.role);
+}
+
+// Only the members that were added to this group itself
+const directMembers = group.getDirectMembers();
+// #endregion
+
+// #region GetRole
+// The role of the current account in this group
+const myRole = group.myRole();
+
+// The role of any account, looked up by its ID ("me" and "everyone" also work)
+const bobsRole = group.getRoleOf(bobsId as ID<Account>);
+const everyoneRole = group.getRoleOf("everyone");
+
+if (bobsRole === "admin") {
+  console.log("Bob is an admin");
 }
 // #endregion
 
